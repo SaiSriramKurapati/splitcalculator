@@ -10,6 +10,8 @@ const BillUploader = () => {
     const [assignments, setAssignments] = useState({});
     const [totals, setTotals] = useState({});
     const [summary, setSummary] = useState({ subtotal: 0, tax: 0, total: 0 });
+    const [loading, setLoading] = useState(false);
+
 
     const handleFileChange = (e) => {
         setFile(e.target.files[0]);
@@ -24,9 +26,11 @@ const BillUploader = () => {
         const formData = new FormData();
         formData.append('bill', file); 
 
+        setLoading(true); // Start loading
+
         try {
             const response = await axios.post(
-                'http://localhost:5001/api/bills/upload',
+                'https://splitcalculator-backend.onrender.com/api/bills/upload',
                 formData,
                 {
                     headers: {
@@ -36,11 +40,18 @@ const BillUploader = () => {
             );
 
             setBillData(response.data);
+            setSummary({
+                subtotal: response.data.subtotal || 0,
+                tax: response.data.tax || 0,
+                total: response.data.total || 0,
+            }); // Set the summary based on the API response
             setAssignments({});
             setError(null);
         } catch (error) {
             console.error("Error uploading the bill:", error);
             setError("Failed to upload the bill. Please try again.");
+        } finally {
+            setLoading(false); // Stop loading
         }
     };
 
@@ -80,54 +91,78 @@ const BillUploader = () => {
   
 
 
+    // const handleAssignAll = (itemIndex) => {
+    //     setAssignments((prevAssignments) => {
+    //         const updated = { ...prevAssignments };
+    //         updated[itemIndex] = [...members];
+    //         return updated;
+    //     });
+    // };
+
     const handleAssignAll = (itemIndex) => {
         setAssignments((prevAssignments) => {
             const updated = { ...prevAssignments };
-            updated[itemIndex] = [...members];
+    
+            // Check if all members are already assigned
+            const allAssigned = members.every((member) => updated[itemIndex]?.includes(member));
+    
+            if (allAssigned) {
+                // If all members are assigned, unassign all
+                updated[itemIndex] = [];
+            } else {
+                // Otherwise, assign all members
+                updated[itemIndex] = [...members];
+            }
+    
             return updated;
         });
     };
-
+    
     const calculateSplit = () => {
-    const totals = {};
-    let subTotal = 0;
-
-    billData.items.forEach((item, index) => {
-        const assignedMembers = assignments[index] || [];
-        const splitPrice = item.price / (assignedMembers.length || 1);
-        subTotal += item.price;
-
-        assignedMembers.forEach(member => {
-            totals[member] = (totals[member] || 0) + splitPrice;
-        });
-
-        if (assignedMembers.length === 0) {
-            // If no one assigned, split among all members equally
-            members.forEach(member => {
-                totals[member] = (totals[member] || 0) + (item.price / members.length);
+        const totals = {};
+        let subTotal = 0;
+    
+        const updatedAssignments = { ...assignments };
+    
+        // Ensure all items are assigned for calculations
+        billData.items.forEach((item, index) => {
+            if (!updatedAssignments[index] || updatedAssignments[index].length === 0) {
+                // Assign all members if no one is assigned
+                updatedAssignments[index] = [...members];
+            }
+    
+            const assignedMembers = updatedAssignments[index];
+            const splitPrice = item.price / assignedMembers.length;
+            subTotal += item.price;
+    
+            assignedMembers.forEach((member) => {
+                totals[member] = (totals[member] || 0) + splitPrice;
             });
-        }
-    });
-
-    const taxAmount = billData.tax;
-    let grandTotal = 0;
-
-    members.forEach(member => {
-        const memberShare = (totals[member] || 0) / subTotal;
-        const taxSplit = memberShare * taxAmount;
-        totals[member] = (totals[member] || 0) + taxSplit;
-        grandTotal += totals[member];
-    });
-
-    const overallTotal = subTotal + taxAmount;
-
-    setTotals(totals);
-    setSummary({
-        subtotal: subTotal,
-        tax: taxAmount,
-        total: overallTotal
-    });
-  };
+        });
+    
+        const taxAmount = billData.tax;
+        let grandTotal = 0;
+    
+        // Add tax share for each member
+        members.forEach((member) => {
+            const memberShare = (totals[member] || 0) / subTotal;
+            const taxSplit = memberShare * taxAmount;
+            totals[member] = (totals[member] || 0) + taxSplit;
+            grandTotal += totals[member];
+        });
+    
+        const overallTotal = subTotal + taxAmount;
+    
+        // Update state with calculations
+        setAssignments(updatedAssignments); // Save updated assignments for UI consistency
+        setTotals(totals);
+        setSummary({
+            subtotal: subTotal,
+            tax: taxAmount,
+            total: overallTotal,
+        });
+    };
+    
 
     const handlePriceChange = (index, newPrice) => {
       const updatedBillData = { ...billData };
@@ -164,8 +199,8 @@ const BillUploader = () => {
             
             <button 
               onClick={handleScan} 
-              className="mt-4 bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
-                Scan
+              className="mt-4 bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600"  disabled={loading}>
+                {loading ? "Loading..." : "Scan"}
             </button>
 
             {error && (
@@ -187,7 +222,7 @@ const BillUploader = () => {
                     <button
                         onClick={handleAddMember}
                         className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-                        Add Member
+                        Add
                     </button>
                 </div>
             </div>
@@ -230,7 +265,9 @@ const BillUploader = () => {
                                           ))}
                                           <button 
                                               onClick={() => handleAssignAll(index)}
-                                              className="bg-yellow-400 px-4 py-2 m-1 rounded">
+                                              className={`px-4 py-2 m-1 rounded ${
+                                                assignments[index]?.length === members.length ? 'bg-yellow-400' : 'bg-gray-300'
+                                            }`}>
                                               All
                                           </button>
                                       </td>
