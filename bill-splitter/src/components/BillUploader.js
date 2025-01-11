@@ -181,11 +181,22 @@ const BillUploader = () => {
     };
 
 
+    const handleSummaryChange = (field, value) => {
+        const updatedSummary = { ...summary, [field]: parseFloat(value) || 0 };
+        
+        // Recalculate the total whenever subtotal or tax is updated
+        if (field === 'subtotal' || field === 'tax') {
+            updatedSummary.total = updatedSummary.subtotal + updatedSummary.tax;
+        }
+        
+        setSummary(updatedSummary);
+    };
+    
 
     return (
         <div className="flex flex-col items-center justify-center space-y-5 mt-[5vh] mb-20">
 
-            <h1 className="text-2xl font-bold">Bill Scanner</h1>
+            <h1 className="text-2xl font-bold">Hello, Calculate exactly how much you owe!</h1>
             
             <div className="flex items-center gap-10">
               <label className="text-[20px] font-medium">Upload an Image</label>
@@ -277,20 +288,48 @@ const BillUploader = () => {
                         <tfoot>
                             <tr>
                                 <td className="border border-gray-300 px-4 py-2 font-bold">Subtotal</td>
-                                <td className="border border-gray-300 px-4 py-2">${summary.subtotal.toFixed(2)}</td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                    <input
+                                        type="number"
+                                        value={summary.subtotal}
+                                        min="0"
+                                        step="0.01"
+                                        onChange={(e) => handleSummaryChange('subtotal', e.target.value)}
+                                        className="w-full p-1 border rounded"
+                                    />
+                                </td>
                                 <td></td>
                             </tr>
                             <tr>
                                 <td className="border border-gray-300 px-4 py-2 font-bold">Tax</td>
-                                <td className="border border-gray-300 px-4 py-2">${summary.tax.toFixed(2)}</td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                    <input
+                                        type="number"
+                                        value={summary.tax}
+                                        min="0"
+                                        step="0.01"
+                                        onChange={(e) => handleSummaryChange('tax', e.target.value)}
+                                        className="w-full p-1 border rounded"
+                                    />
+                                </td>
                                 <td></td>
                             </tr>
                             <tr>
                                 <td className="border border-gray-300 px-4 py-2 font-bold">Total</td>
-                                <td className="border border-gray-300 px-4 py-2">${summary.total.toFixed(2)}</td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                    <input
+                                        type="number"
+                                        value={summary.total}
+                                        min="0"
+                                        step="0.01"
+                                        readOnly
+                                        className="w-full p-1 border rounded bg-gray-200"
+                                    />
+                                </td>
                                 <td></td>
                             </tr>
                         </tfoot>
+
                     </table>
                     <button
                         onClick={calculateSplit}
