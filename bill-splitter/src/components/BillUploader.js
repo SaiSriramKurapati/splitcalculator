@@ -140,7 +140,7 @@ const BillUploader = () => {
             });
         });
     
-        const taxAmount = billData.tax;
+        const taxAmount = summary.tax;
         let grandTotal = 0;
     
         // Add tax share for each member
@@ -156,11 +156,7 @@ const BillUploader = () => {
         // Update state with calculations
         setAssignments(updatedAssignments); // Save updated assignments for UI consistency
         setTotals(totals);
-        setSummary({
-            subtotal: subTotal,
-            tax: taxAmount,
-            total: overallTotal,
-        });
+        
     };
     
 
