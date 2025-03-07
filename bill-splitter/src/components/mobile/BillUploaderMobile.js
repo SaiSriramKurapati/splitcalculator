@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from 'axios';
 import './BillUploaderMobile.css';
+import html2canvas from 'html2canvas';
 
 const BillUploaderMobile = () => {
     // Same state variables as desktop version
@@ -17,6 +18,20 @@ const BillUploaderMobile = () => {
     
     // New state for adding items
     const [newItem, setNewItem] = useState({ name: "", price: 0 });
+
+    // New state variables
+    const [showResults, setShowResults] = useState(false);
+    const [view, setView] = useState('summary');
+    const [currentMemberIndex, setCurrentMemberIndex] = useState(0);
+    const [selectedMember, setSelectedMember] = useState(null);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    // Add useEffect to set default selected member
+    useEffect(() => {
+        if (members.length > 0 && !selectedMember) {
+            setSelectedMember(members[0]);
+        }
+    }, [members, selectedMember]);
 
     // Reuse the same handlers from the desktop version
     const handleFileChange = (e) => {
@@ -104,21 +119,22 @@ const BillUploaderMobile = () => {
         });
     };
 
-    const handleAssignAll = (itemIndex) => {
-        setAssignments((prevAssignments) => {
-            const updated = { ...prevAssignments };
-    
-            // Check if all members are already assigned
-            const allAssigned = members.every((member) => updated[itemIndex]?.includes(member));
-    
-            if (allAssigned) {
-                // If all members are assigned, unassign all
-                updated[itemIndex] = [];
-            } else {
-                // Otherwise, assign all members
-                updated[itemIndex] = [...members];
-            }
-    
+    const handleAssignAll = (member) => {
+        const allAssigned = isAllAssigned(member);
+        
+        setAssignments(prev => {
+            const updated = { ...prev };
+            billData.items.forEach((_, index) => {
+                if (!updated[index]) {
+                    updated[index] = [];
+                }
+                
+                if (allAssigned) {
+                    updated[index] = updated[index].filter(m => m !== member);
+                } else if (!updated[index].includes(member)) {
+                    updated[index] = [...updated[index], member];
+                }
+            });
             return updated;
         });
     };
@@ -268,49 +284,81 @@ const BillUploaderMobile = () => {
         setActiveStep(prev => Math.max(prev - 1, 1));
     };
 
+    // Helper functions for item assignment
+    const isItemAssigned = (itemIndex, member) => {
+        return assignments[itemIndex]?.includes(member);
+    };
+
+    const isAllAssigned = (member) => {
+        return billData?.items?.every((_, index) => isItemAssigned(index, member));
+    };
+
+    const getAssignedItems = (member) => {
+        return billData?.items?.filter((_, index) => isItemAssigned(index, member)) || [];
+    };
+
+    const getItemShares = (item) => {
+        const itemIndex = billData.items.findIndex(i => i === item);
+        return assignments[itemIndex]?.length || 1;
+    };
+
+    const calculateAndShowResults = () => {
+        const results = calculateSplit();
+        setTotals(results);
+        setShowResults(true);
+    };
+
+    // Add new function for downloading results as image
+    const downloadResultsAsImage = async () => {
+        const resultsElement = document.getElementById('split-results');
+        if (!resultsElement) return;
+
+        try {
+            // Add temporary class for better image capture
+            resultsElement.classList.add('capturing');
+            
+            const canvas = await html2canvas(resultsElement, {
+                backgroundColor: '#ffffff',
+                scale: 2, // Higher resolution
+                logging: false,
+                useCORS: true
+            });
+            
+            // Remove temporary class
+            resultsElement.classList.remove('capturing');
+
+            // Create download link
+            const image = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'split-results.png';
+            link.href = image;
+            link.click();
+        } catch (error) {
+            console.error('Error generating image:', error);
+        }
+    };
+
     // Render different steps based on activeStep
     const renderStep = () => {
         switch (activeStep) {
-            case 1: // Upload bill
+            case 1: // Members and Bill Upload
                 return (
-                    <div className="mobile-step upload-step">
-                        <h2>Upload Your Bill</h2>
-                        <div className="file-upload-container">
-                            <input 
-                                type="file" 
-                                onChange={handleFileChange} 
-                                accept="image/*" 
-                                className="file-input"
-                            />
-                            <button 
-                                onClick={handleScan} 
-                                disabled={!file || loading} 
-                                className="scan-button"
-                            >
-                                {loading ? "Scanning..." : "Scan Bill"}
-                            </button>
-                            <button 
-                                onClick={handleSkipUpload} 
-                                className="skip-button"
-                            >
-                                Skip & Create Manually
-                            </button>
-                        </div>
-                        {error && <div className="error-message">{error}</div>}
-                    </div>
-                );
-            case 2: // Add members
-                return (
-                    <div className="mobile-step members-step">
-                        <h2>Add Group Members</h2>
+                    <div className="mobile-step upload-members-step">
+                        <h2>Hello!</h2>
+                        <h3 className="subtitle">Calculate exactly how much you owe!</h3>
+                        
+                        <div className="section-title">Add Members</div>
                         <div className="add-member-container">
-                            <input
-                                type="text"
-                                value={memberName}
-                                onChange={(e) => setMemberName(e.target.value)}
-                                placeholder="Enter member name"
-                                className="member-input"
-                            />
+                            <div className="member-input-wrapper">
+                                <i className="member-icon">👥</i>
+                                <input
+                                    type="text"
+                                    value={memberName}
+                                    onChange={(e) => setMemberName(e.target.value)}
+                                    placeholder="Add members"
+                                    className="member-input"
+                                />
+                            </div>
                             <button onClick={handleAddMember} className="add-button">
                                 Add
                             </button>
@@ -319,29 +367,65 @@ const BillUploaderMobile = () => {
                             {members.map((member, index) => (
                                 <div key={index} className="member-item">
                                     {member}
+                                    <button 
+                                        onClick={() => {
+                                            const updatedMembers = members.filter((_, i) => i !== index);
+                                            setMembers(updatedMembers);
+                                        }}
+                                        className="remove-member"
+                                    >
+                                        ×
+                                    </button>
                                 </div>
                             ))}
                         </div>
-                        <div className="step-navigation">
-                            <button onClick={goToPrevStep} className="prev-button">
-                                Back
-                            </button>
-                            <button 
-                                onClick={goToNextStep} 
-                                disabled={members.length === 0}
-                                className="next-button"
-                            >
-                                Next
-                            </button>
-                        </div>
+
+                        {members.length > 0 && (
+                            <div className="file-upload-section">
+                                {file ? (
+                                    <div className="selected-file">
+                                        <span className="file-icon">📎</span>
+                                        <span className="file-name">{file.name} ({(file.size / (1024 * 1024)).toFixed(1)}MB)</span>
+                                        <button 
+                                            onClick={() => setFile(null)} 
+                                            className="remove-file"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="file-input-wrapper">
+                                        <input 
+                                            type="file" 
+                                            onChange={handleFileChange} 
+                                            accept="image/*" 
+                                            className="file-input"
+                                            id="bill-file-input"
+                                        />
+                                        <label htmlFor="bill-file-input" className="file-input-label">
+                                            Choose Bill Image
+                                        </label>
+                                    </div>
+                                )}
+                                
+                                <button 
+                                    onClick={handleScan} 
+                                    disabled={!file || loading} 
+                                    className="scan-button"
+                                >
+                                    {loading ? "Scanning..." : "Scan"}
+                                </button>
+                            </div>
+                        )}
+                        
+                        {error && <div className="error-message">{error}</div>}
                     </div>
                 );
-            case 3: // Assign items
+            case 2: // Bill Items and Summary
                 return (
-                    <div className="mobile-step assign-step">
-                        <h2>Assign Items</h2>
+                    <div className="mobile-step items-step">
+                        <h2>Bill Items</h2>
                         
-                        {/* Add new item form */}
                         <div className="add-item-container">
                             <div className="form-group">
                                 <input
@@ -360,74 +444,39 @@ const BillUploaderMobile = () => {
                                     min="0"
                                     step="0.01"
                                 />
-                                <button 
-                                    onClick={handleAddItem}
-                                    className="add-item-button"
-                                >
+                                <button onClick={handleAddItem} className="add-item-button">
                                     Add Item
                                 </button>
                             </div>
                         </div>
-                        
-                        {billData && billData.items && (
-                            <div className="items-list">
-                                {billData.items.length === 0 ? (
-                                    <div className="empty-items-message">
-                                        No items yet. Add items using the form above.
-                                    </div>
-                                ) : (
-                                    billData.items.map((item, index) => (
-                                        <div key={index} className="item-card">
-                                            <div className="item-details">
-                                                <div className="item-name">{item.name}</div>
-                                                <div className="item-price">
-                                                    <input
-                                                        type="number"
-                                                        value={item.price}
-                                                        onChange={(e) => handlePriceChange(index, e.target.value)}
-                                                        className="price-input"
-                                                        min="0"
-                                                        step="0.01"
-                                                    />
-                                                    <button 
-                                                        onClick={() => handleRemoveItem(index)}
-                                                        className="remove-item-button"
-                                                    >
-                                                        ×
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="item-assignments">
-                                                <div className="assign-all">
-                                                    <button 
-                                                        onClick={() => handleAssignAll(index)}
-                                                        className="assign-all-button"
-                                                    >
-                                                        {members.every(m => assignments[index]?.includes(m)) 
-                                                            ? "Unassign All" 
-                                                            : "Assign All"}
-                                                    </button>
-                                                </div>
-                                                <div className="member-toggles">
-                                                    {members.map((member, mIndex) => (
-                                                        <button
-                                                            key={mIndex}
-                                                            onClick={() => handleItemAssign(index, member)}
-                                                            className={`member-toggle ${
-                                                                assignments[index]?.includes(member) ? "active" : ""
-                                                            }`}
-                                                        >
-                                                            {member}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
+
+                        <div className="items-list">
+                            {billData?.items?.map((item, index) => (
+                                <div key={index} className="item-card">
+                                    <div className="item-details">
+                                        <div className="item-name">{item.name}</div>
+                                        <div className="item-price">
+                                            <input
+                                                type="number"
+                                                value={item.price}
+                                                onChange={(e) => handlePriceChange(index, e.target.value)}
+                                                className="price-input"
+                                                min="0"
+                                                step="0.01"
+                                            />
+                                            <button 
+                                                onClick={() => handleRemoveItem(index)}
+                                                className="remove-item-button"
+                                            >
+                                                ×
+                                            </button>
                                         </div>
-                                    ))
-                                )}
-                            </div>
-                        )}
-                        <div className="summary-inputs">
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="bill-summary">
                             <div className="summary-field">
                                 <label>Subtotal:</label>
                                 <input
@@ -437,7 +486,6 @@ const BillUploaderMobile = () => {
                                     className="summary-input"
                                     min="0"
                                     step="0.01"
-                                    readOnly
                                 />
                             </div>
                             <div className="summary-field">
@@ -456,27 +504,83 @@ const BillUploaderMobile = () => {
                                 <input
                                     type="number"
                                     value={summary.total}
-                                    onChange={(e) => handleSummaryChange("total", e.target.value)}
-                                    className="summary-input"
-                                    min="0"
-                                    step="0.01"
                                     readOnly
+                                    className="summary-input"
                                 />
                             </div>
                         </div>
+
                         <div className="step-navigation">
-                            <button onClick={goToPrevStep} className="prev-button">
+                            <button onClick={() => setActiveStep(3)} className="next-button" disabled={!billData?.items?.length}>
+                                Continue to Assign Items
+                            </button>
+                            <button onClick={() => setActiveStep(1)} className="prev-button">
                                 Back
                             </button>
+                        </div>
+                    </div>
+                );
+            case 3: // Item Assignment
+                const currentMember = members[currentMemberIndex];
+                return (
+                    <div className="mobile-step assign-step">
+                        <h2>Assign Items for {currentMember}</h2>
+                        
+                        <div className="assignment-progress">
+                            <div className="progress-text">
+                                Member {currentMemberIndex + 1} of {members.length}
+                            </div>
+                            <div className="progress-bar">
+                                <div 
+                                    className="progress-fill" 
+                                    style={{width: `${((currentMemberIndex + 1) / members.length) * 100}%`}}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="items-list">
                             <button 
-                                onClick={() => {
-                                    calculateSplit();
-                                    goToNextStep();
-                                }} 
-                                className="next-button"
-                                disabled={!billData || !billData.items || billData.items.length === 0}
+                                onClick={() => handleAssignAll(currentMember)} 
+                                className="assign-all-button"
                             >
-                                Calculate Split
+                                {isAllAssigned(currentMember) ? "Unselect All" : "Select All"}
+                            </button>
+
+                            {billData?.items?.map((item, index) => (
+                                <div 
+                                    key={index} 
+                                    className={`item-card ${isItemAssigned(index, currentMember) ? 'selected' : ''}`}
+                                    onClick={() => handleItemAssign(index, currentMember)}
+                                >
+                                    <div className="item-details">
+                                        <div className="item-name">{item.name}</div>
+                                        <div className="item-price">${item.price.toFixed(2)}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="step-navigation">
+                            {currentMemberIndex < members.length - 1 ? (
+                                <button 
+                                    onClick={() => setCurrentMemberIndex(prev => prev + 1)} 
+                                    className="next-button"
+                                >
+                                    Next Member
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={() => {
+                                        calculateAndShowResults();
+                                        setActiveStep(4);
+                                    }} 
+                                    className="calculate-button"
+                                >
+                                    Calculate Split
+                                </button>
+                            )}
+                            <button onClick={() => setActiveStep(2)} className="prev-button">
+                                Back
                             </button>
                         </div>
                     </div>
@@ -484,18 +588,88 @@ const BillUploaderMobile = () => {
             case 4: // Results
                 return (
                     <div className="mobile-step results-step">
-                        <h2>Split Results</h2>
-                        <div className="results-container">
-                            {Object.entries(totals).map(([member, amount], index) => (
-                                <div key={index} className="result-item">
-                                    <div className="member-name">{member}</div>
-                                    <div className="member-amount">${amount.toFixed(2)}</div>
+                        <div className="results-section" id="split-results">
+                            <div className="results-header">
+                                <h3>Split Results</h3>
+                                <button 
+                                    onClick={downloadResultsAsImage}
+                                    className="download-button"
+                                >
+                                    Download Results
+                                </button>
+                            </div>
+
+                            <div className="results-tabs">
+                                <button 
+                                    className={`tab ${view === 'summary' ? 'active' : ''}`}
+                                    onClick={() => setView('summary')}
+                                >
+                                    Summary
+                                </button>
+                                <button 
+                                    className={`tab ${view === 'details' ? 'active' : ''}`}
+                                    onClick={() => setView('details')}
+                                >
+                                    Details
+                                </button>
+                            </div>
+
+                            {view === 'summary' ? (
+                                <div className="summary-view">
+                                    {members.map((member, index) => (
+                                        <div key={index} className="member-total">
+                                            <span>{member}</span>
+                                            <span>${totals[member]?.toFixed(2) || '0.00'}</span>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
+                            ) : (
+                                <div className="details-view">
+                                    <div className="custom-dropdown">
+                                        <div 
+                                            className="selected-member"
+                                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                        >
+                                            {selectedMember}
+                                            <span className="dropdown-arrow"></span>
+                                        </div>
+                                        {isDropdownOpen && (
+                                            <div className="dropdown-options">
+                                                {members.map((member, index) => (
+                                                    <div 
+                                                        key={index} 
+                                                        className={`dropdown-option ${selectedMember === member ? 'selected' : ''}`}
+                                                        onClick={() => {
+                                                            setSelectedMember(member);
+                                                            setIsDropdownOpen(false);
+                                                        }}
+                                                    >
+                                                        {member}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="member-details">
+                                        <div className="assigned-items">
+                                            {getAssignedItems(selectedMember).map((item, itemIndex) => (
+                                                <div key={itemIndex} className="assigned-item">
+                                                    <span>{item.name}</span>
+                                                    <span>${(item.price / getItemShares(item)).toFixed(2)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
+
                         <div className="step-navigation">
-                            <button onClick={goToPrevStep} className="prev-button">
-                                Back
+                            <button 
+                                onClick={() => setActiveStep(3)} 
+                                className="prev-button"
+                            >
+                                Back to Assignments
                             </button>
                         </div>
                     </div>
@@ -509,9 +683,6 @@ const BillUploaderMobile = () => {
         <div className="bill-uploader-mobile">
             <div className="mobile-header">
                 <h1 className="mobile-title">Itemized Bill Splitter</h1>
-            </div>
-            {renderStep()}
-            <div className="mobile-footer">
                 <div className="step-indicator">
                     {[1, 2, 3, 4].map(step => (
                         <div 
@@ -521,6 +692,7 @@ const BillUploaderMobile = () => {
                     ))}
                 </div>
             </div>
+            {renderStep()}
         </div>
     );
 };
