@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from 'axios';
 import './BillUploaderMobile.css';
 import html2canvas from 'html2canvas';
+import ScannerView from './ScannerView';
 
 const BillUploaderMobile = () => {
     // Same state variables as desktop version
@@ -25,6 +26,8 @@ const BillUploaderMobile = () => {
     const [currentMemberIndex, setCurrentMemberIndex] = useState(0);
     const [selectedMember, setSelectedMember] = useState(null);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [scanProgress, setScanProgress] = useState(0);
+    const [isScanning, setIsScanning] = useState(false);
 
     // Add useEffect to set default selected member
     useEffect(() => {
@@ -45,9 +48,21 @@ const BillUploaderMobile = () => {
         }
 
         const formData = new FormData();
-        formData.append('bill', file); 
+        formData.append('bill', file);
 
         setLoading(true);
+        setIsScanning(true);
+
+        // Simulate progress updates
+        const progressInterval = setInterval(() => {
+            setScanProgress(prev => {
+                if (prev >= 94) {
+                    clearInterval(progressInterval);
+                    return prev;
+                }
+                return prev + 2;
+            });
+        }, 100);
 
         try {
             const response = await axios.post(
@@ -68,11 +83,21 @@ const BillUploaderMobile = () => {
             });
             setAssignments({});
             setError(null);
-            setActiveStep(2); // Move to next step after successful scan
+            
+            // Complete the progress
+            setScanProgress(100);
+            setTimeout(() => {
+                setIsScanning(false);
+                setScanProgress(0);
+                setActiveStep(2);
+            }, 500);
         } catch (error) {
             console.error("Error uploading the bill:", error);
             setError("Failed to upload the bill. Please try again.");
+            setIsScanning(false);
+            setScanProgress(0);
         } finally {
+            clearInterval(progressInterval);
             setLoading(false);
         }
     };
@@ -338,19 +363,22 @@ const BillUploaderMobile = () => {
         }
     };
 
+    // Add handler for removing file
+    const handleRemoveFile = () => {
+        setFile(null);
+        setError(null);
+    };
+
     // Render different steps based on activeStep
     const renderStep = () => {
         switch (activeStep) {
             case 1: // Members and Bill Upload
                 return (
                     <div className="mobile-step upload-members-step">
-                        <h2>Hello!</h2>
-                        <h3 className="subtitle">Calculate exactly how much you owe!</h3>
                         
                         <div className="section-title">Add Members</div>
                         <div className="add-member-container">
                             <div className="member-input-wrapper">
-                                <i className="member-icon">👥</i>
                                 <input
                                     type="text"
                                     value={memberName}
@@ -358,10 +386,13 @@ const BillUploaderMobile = () => {
                                     placeholder="Add members"
                                     className="member-input"
                                 />
+                                <div className="member-icon"></div>
                             </div>
-                            <button onClick={handleAddMember} className="add-button">
-                                Add
-                            </button>
+                            <div className="add-button-container">
+                                <button onClick={handleAddMember} className="add-button">
+                                    Add
+                                </button>
+                            </div>
                         </div>
                         <div className="members-list">
                             {members.map((member, index) => (
@@ -380,43 +411,51 @@ const BillUploaderMobile = () => {
                             ))}
                         </div>
 
-                        {members.length > 0 && (
-                            <div className="file-upload-section">
-                                {file ? (
-                                    <div className="selected-file">
-                                        <span className="file-icon">📎</span>
-                                        <span className="file-name">{file.name} ({(file.size / (1024 * 1024)).toFixed(1)}MB)</span>
+                        <div className="file-upload-section">
+                            {file && (
+                                <div className="file-info">
+                                    <div className="file-name">
+                                        <span className="upload-icon"></span>
+                                        {file.name} ({(file.size / (1024 * 1024)).toFixed(1)}MB)
                                         <button 
-                                            onClick={() => setFile(null)} 
-                                            className="remove-file"
+                                            onClick={handleRemoveFile}
+                                            className="remove-file-button"
+                                            aria-label="Remove file"
                                         >
                                             ×
                                         </button>
                                     </div>
-                                ) : (
-                                    <div className="file-input-wrapper">
-                                        <input 
-                                            type="file" 
-                                            onChange={handleFileChange} 
-                                            accept="image/*" 
-                                            className="file-input"
-                                            id="bill-file-input"
-                                        />
-                                        <label htmlFor="bill-file-input" className="file-input-label">
-                                            Choose Bill Image
-                                        </label>
+                                </div>
+                            )}
+                            
+                            {!file ? (
+                                <>
+                                    <input 
+                                        type="file" 
+                                        onChange={handleFileChange} 
+                                        accept="image/jpeg,image/png" 
+                                        className="file-input"
+                                        id="bill-file-input"
+                                    />
+                                    <label htmlFor="bill-file-input" className="upload-button">
+                                        <span className="upload-icon"></span>
+                                        Upload Bill
+                                    </label>
+                                    <div className="file-format">
+                                        Supported formats: JPEG, PNG
                                     </div>
-                                )}
-                                
+                                </>
+                            ) : (
                                 <button 
                                     onClick={handleScan} 
-                                    disabled={!file || loading} 
-                                    className="scan-button"
+                                    disabled={loading} 
+                                    className="scan-button mt-3"
                                 >
+                                    <span className="scan-icon"></span>
                                     {loading ? "Scanning..." : "Scan"}
                                 </button>
-                            </div>
-                        )}
+                            )}
+                        </div>
                         
                         {error && <div className="error-message">{error}</div>}
                     </div>
@@ -681,6 +720,7 @@ const BillUploaderMobile = () => {
 
     return (
         <div className="bill-uploader-mobile">
+            {isScanning && <ScannerView progress={scanProgress} />}
             <div className="mobile-header">
                 <h1 className="mobile-title">Itemized Bill Splitter</h1>
                 <div className="step-indicator">
