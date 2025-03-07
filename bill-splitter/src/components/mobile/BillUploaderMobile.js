@@ -14,6 +14,9 @@ const BillUploaderMobile = () => {
     const [summary, setSummary] = useState({ subtotal: 0, tax: 0, total: 0 });
     const [loading, setLoading] = useState(false);
     const [activeStep, setActiveStep] = useState(1); // For mobile step-by-step flow
+    
+    // New state for adding items
+    const [newItem, setNewItem] = useState({ name: "", price: 0 });
 
     // Reuse the same handlers from the desktop version
     const handleFileChange = (e) => {
@@ -57,6 +60,19 @@ const BillUploaderMobile = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Initialize empty bill if user skips uploading
+    const handleSkipUpload = () => {
+        setBillData({
+            items: []
+        });
+        setSummary({
+            subtotal: 0,
+            tax: 0,
+            total: 0
+        });
+        setActiveStep(2);
     };
 
     const handleAddMember = () => {
@@ -107,6 +123,75 @@ const BillUploaderMobile = () => {
         });
     };
     
+    // New handler for adding an item
+    const handleAddItem = () => {
+        if (newItem.name.trim() === "") {
+            alert("Item name cannot be empty");
+            return;
+        }
+        
+        if (parseFloat(newItem.price) <= 0) {
+            alert("Price must be greater than zero");
+            return;
+        }
+        
+        const updatedBillData = { ...billData };
+        if (!updatedBillData.items) {
+            updatedBillData.items = [];
+        }
+        
+        // Add the new item to the bill data
+        updatedBillData.items.push({
+            name: newItem.name,
+            price: parseFloat(newItem.price)
+        });
+        
+        // Update subtotal
+        const newSubtotal = updatedBillData.items.reduce((sum, item) => sum + parseFloat(item.price), 0);
+        const newSummary = {
+            ...summary,
+            subtotal: newSubtotal,
+            total: newSubtotal + parseFloat(summary.tax)
+        };
+        
+        // Update state
+        setBillData(updatedBillData);
+        setSummary(newSummary);
+        setNewItem({ name: "", price: 0 }); // Reset form
+    };
+    
+    // New handler for removing an item
+    const handleRemoveItem = (index) => {
+        const updatedBillData = { ...billData };
+        
+        // Remove the item
+        updatedBillData.items.splice(index, 1);
+        
+        // Update assignments
+        const updatedAssignments = { ...assignments };
+        
+        // Shift all assignments for items after the deleted one
+        for (let i = index; i < updatedBillData.items.length; i++) {
+            updatedAssignments[i] = updatedAssignments[i + 1];
+        }
+        
+        // Delete the last assignment entry
+        delete updatedAssignments[updatedBillData.items.length];
+        
+        // Update subtotal
+        const newSubtotal = updatedBillData.items.reduce((sum, item) => sum + parseFloat(item.price), 0);
+        const newSummary = {
+            ...summary,
+            subtotal: newSubtotal,
+            total: newSubtotal + parseFloat(summary.tax)
+        };
+        
+        // Update state
+        setBillData(updatedBillData);
+        setAssignments(updatedAssignments);
+        setSummary(newSummary);
+    };
+    
     const calculateSplit = () => {
         const totals = {};
         let subTotal = 0;
@@ -148,12 +233,30 @@ const BillUploaderMobile = () => {
         if (billData && billData.items) {
             const updatedItems = [...billData.items];
             updatedItems[index] = { ...updatedItems[index], price: parseFloat(newPrice) || 0 };
+            
+            // Update subtotal
+            const newSubtotal = updatedItems.reduce((sum, item) => sum + parseFloat(item.price), 0);
+            const newSummary = {
+                ...summary,
+                subtotal: newSubtotal,
+                total: newSubtotal + parseFloat(summary.tax)
+            };
+            
             setBillData({ ...billData, items: updatedItems });
+            setSummary(newSummary);
         }
     };
 
     const handleSummaryChange = (field, value) => {
-        setSummary({ ...summary, [field]: parseFloat(value) || 0 });
+        const newValue = parseFloat(value) || 0;
+        const newSummary = { ...summary, [field]: newValue };
+        
+        // Update total when tax or subtotal changes
+        if (field === 'tax' || field === 'subtotal') {
+            newSummary.total = newSummary.subtotal + newSummary.tax;
+        }
+        
+        setSummary(newSummary);
     };
 
     // Mobile-specific navigation functions
@@ -185,6 +288,12 @@ const BillUploaderMobile = () => {
                                 className="scan-button"
                             >
                                 {loading ? "Scanning..." : "Scan Bill"}
+                            </button>
+                            <button 
+                                onClick={handleSkipUpload} 
+                                className="skip-button"
+                            >
+                                Skip & Create Manually
                             </button>
                         </div>
                         {error && <div className="error-message">{error}</div>}
@@ -231,48 +340,91 @@ const BillUploaderMobile = () => {
                 return (
                     <div className="mobile-step assign-step">
                         <h2>Assign Items</h2>
+                        
+                        {/* Add new item form */}
+                        <div className="add-item-container">
+                            <div className="form-group">
+                                <input
+                                    type="text"
+                                    value={newItem.name}
+                                    onChange={(e) => setNewItem({...newItem, name: e.target.value})}
+                                    placeholder="Item name"
+                                    className="item-input"
+                                />
+                                <input
+                                    type="number"
+                                    value={newItem.price}
+                                    onChange={(e) => setNewItem({...newItem, price: e.target.value})}
+                                    placeholder="Price"
+                                    className="price-input"
+                                    min="0"
+                                    step="0.01"
+                                />
+                                <button 
+                                    onClick={handleAddItem}
+                                    className="add-item-button"
+                                >
+                                    Add Item
+                                </button>
+                            </div>
+                        </div>
+                        
                         {billData && billData.items && (
                             <div className="items-list">
-                                {billData.items.map((item, index) => (
-                                    <div key={index} className="item-card">
-                                        <div className="item-details">
-                                            <div className="item-name">{item.name}</div>
-                                            <div className="item-price">
-                                                <input
-                                                    type="number"
-                                                    value={item.price}
-                                                    onChange={(e) => handlePriceChange(index, e.target.value)}
-                                                    className="price-input"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="item-assignments">
-                                            <div className="assign-all">
-                                                <button 
-                                                    onClick={() => handleAssignAll(index)}
-                                                    className="assign-all-button"
-                                                >
-                                                    {members.every(m => assignments[index]?.includes(m)) 
-                                                        ? "Unassign All" 
-                                                        : "Assign All"}
-                                                </button>
-                                            </div>
-                                            <div className="member-toggles">
-                                                {members.map((member, mIndex) => (
-                                                    <button
-                                                        key={mIndex}
-                                                        onClick={() => handleItemAssign(index, member)}
-                                                        className={`member-toggle ${
-                                                            assignments[index]?.includes(member) ? "active" : ""
-                                                        }`}
-                                                    >
-                                                        {member}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
+                                {billData.items.length === 0 ? (
+                                    <div className="empty-items-message">
+                                        No items yet. Add items using the form above.
                                     </div>
-                                ))}
+                                ) : (
+                                    billData.items.map((item, index) => (
+                                        <div key={index} className="item-card">
+                                            <div className="item-details">
+                                                <div className="item-name">{item.name}</div>
+                                                <div className="item-price">
+                                                    <input
+                                                        type="number"
+                                                        value={item.price}
+                                                        onChange={(e) => handlePriceChange(index, e.target.value)}
+                                                        className="price-input"
+                                                        min="0"
+                                                        step="0.01"
+                                                    />
+                                                    <button 
+                                                        onClick={() => handleRemoveItem(index)}
+                                                        className="remove-item-button"
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="item-assignments">
+                                                <div className="assign-all">
+                                                    <button 
+                                                        onClick={() => handleAssignAll(index)}
+                                                        className="assign-all-button"
+                                                    >
+                                                        {members.every(m => assignments[index]?.includes(m)) 
+                                                            ? "Unassign All" 
+                                                            : "Assign All"}
+                                                    </button>
+                                                </div>
+                                                <div className="member-toggles">
+                                                    {members.map((member, mIndex) => (
+                                                        <button
+                                                            key={mIndex}
+                                                            onClick={() => handleItemAssign(index, member)}
+                                                            className={`member-toggle ${
+                                                                assignments[index]?.includes(member) ? "active" : ""
+                                                            }`}
+                                                        >
+                                                            {member}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         )}
                         <div className="summary-inputs">
@@ -283,6 +435,9 @@ const BillUploaderMobile = () => {
                                     value={summary.subtotal}
                                     onChange={(e) => handleSummaryChange("subtotal", e.target.value)}
                                     className="summary-input"
+                                    min="0"
+                                    step="0.01"
+                                    readOnly
                                 />
                             </div>
                             <div className="summary-field">
@@ -292,6 +447,8 @@ const BillUploaderMobile = () => {
                                     value={summary.tax}
                                     onChange={(e) => handleSummaryChange("tax", e.target.value)}
                                     className="summary-input"
+                                    min="0"
+                                    step="0.01"
                                 />
                             </div>
                             <div className="summary-field">
@@ -301,6 +458,9 @@ const BillUploaderMobile = () => {
                                     value={summary.total}
                                     onChange={(e) => handleSummaryChange("total", e.target.value)}
                                     className="summary-input"
+                                    min="0"
+                                    step="0.01"
+                                    readOnly
                                 />
                             </div>
                         </div>
@@ -314,6 +474,7 @@ const BillUploaderMobile = () => {
                                     goToNextStep();
                                 }} 
                                 className="next-button"
+                                disabled={!billData || !billData.items || billData.items.length === 0}
                             >
                                 Calculate Split
                             </button>

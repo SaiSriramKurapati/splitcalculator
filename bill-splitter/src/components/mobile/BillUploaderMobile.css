@@ -89,6 +89,16 @@
     cursor: not-allowed;
 }
 
+.skip-button {
+    padding: 12px;
+    background-color: transparent;
+    color: #666;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
 .error-message {
     color: #f44336;
     margin-top: 10px;
@@ -132,6 +142,48 @@
     font-size: 0.9rem;
 }
 
+/* Add item container */
+.add-item-container {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.form-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.item-input {
+    flex: 2;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    min-width: 120px;
+}
+
+.add-item-button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.empty-items-message {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    background-color: #f5f5f5;
+    border-radius: 5px;
+    font-style: italic;
+}
+
 /* Assign Step */
 .items-list {
     display: flex;
@@ -153,10 +205,19 @@
     display: flex;
     justify-content: space-between;
     margin-bottom: 10px;
+    align-items: center;
 }
 
 .item-name {
     font-weight: bold;
+    flex: 1;
+    word-break: break-word;
+}
+
+.item-price {
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 .price-input {
@@ -165,6 +226,22 @@
     border: 1px solid #ddd;
     border-radius: 3px;
     text-align: right;
+}
+
+.remove-item-button {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
 }
 
 .item-assignments {
