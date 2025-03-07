@@ -508,7 +508,10 @@ const BillUploaderMobile = () => {
     return (
         <div className="bill-uploader-mobile">
             <div className="mobile-header">
-                <h1>Bill Splitter</h1>
+                <h1 className="mobile-title">Itemized Bill Splitter</h1>
+            </div>
+            {renderStep()}
+            <div className="mobile-footer">
                 <div className="step-indicator">
                     {[1, 2, 3, 4].map(step => (
                         <div 
@@ -518,7 +521,6 @@ const BillUploaderMobile = () => {
                     ))}
                 </div>
             </div>
-            {renderStep()}
         </div>
     );
 };
