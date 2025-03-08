@@ -28,6 +28,7 @@ const BillUploaderMobile = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [scanProgress, setScanProgress] = useState(0);
     const [isScanning, setIsScanning] = useState(false);
+    const [showAddItemForm, setShowAddItemForm] = useState(false);
 
     // Add useEffect to set default selected member
     useEffect(() => {
@@ -165,6 +166,10 @@ const BillUploaderMobile = () => {
     };
     
     // New handler for adding an item
+    const handleAddItemClick = () => {
+        setShowAddItemForm(true);
+    };
+
     const handleAddItem = () => {
         if (newItem.name.trim() === "") {
             alert("Item name cannot be empty");
@@ -181,24 +186,22 @@ const BillUploaderMobile = () => {
             updatedBillData.items = [];
         }
         
-        // Add the new item to the bill data
         updatedBillData.items.push({
             name: newItem.name,
             price: parseFloat(newItem.price)
         });
         
-        // Update subtotal
         const newSubtotal = updatedBillData.items.reduce((sum, item) => sum + parseFloat(item.price), 0);
         const newSummary = {
             ...summary,
             subtotal: newSubtotal,
-            total: newSubtotal + parseFloat(summary.tax)
+            total: newSubtotal + parseFloat(summary.tax) + (summary.tip || 0)
         };
         
-        // Update state
         setBillData(updatedBillData);
         setSummary(newSummary);
-        setNewItem({ name: "", price: 0 }); // Reset form
+        setNewItem({ name: "", price: 0 });
+        setShowAddItemForm(false); // Hide the form after adding
     };
     
     // New handler for removing an item
@@ -290,14 +293,14 @@ const BillUploaderMobile = () => {
 
     const handleSummaryChange = (field, value) => {
         const newValue = parseFloat(value) || 0;
-        const newSummary = { ...summary, [field]: newValue };
+        const updatedSummary = { ...summary, [field]: newValue };
         
-        // Update total when tax or subtotal changes
-        if (field === 'tax' || field === 'subtotal') {
-            newSummary.total = newSummary.subtotal + newSummary.tax;
+        // Update total when subtotal, tax, or tip changes
+        if (field === 'tax' || field === 'subtotal' || field === 'tip') {
+            updatedSummary.total = updatedSummary.subtotal + updatedSummary.tax + (updatedSummary.tip || 0);
         }
         
-        setSummary(newSummary);
+        setSummary(updatedSummary);
     };
 
     // Mobile-specific navigation functions
@@ -463,38 +466,18 @@ const BillUploaderMobile = () => {
             case 2: // Bill Items and Summary
                 return (
                     <div className="mobile-step items-step">
-                        <h2>Bill Items</h2>
+                        <h2>Review Details</h2>
                         
-                        <div className="add-item-container">
-                            <div className="form-group">
-                                <input
-                                    type="text"
-                                    value={newItem.name}
-                                    onChange={(e) => setNewItem({...newItem, name: e.target.value})}
-                                    placeholder="Item name"
-                                    className="item-input"
-                                />
-                                <input
-                                    type="number"
-                                    value={newItem.price}
-                                    onChange={(e) => setNewItem({...newItem, price: e.target.value})}
-                                    placeholder="Price"
-                                    className="price-input"
-                                    min="0"
-                                    step="0.01"
-                                />
-                                <button onClick={handleAddItem} className="add-item-button">
-                                    Add Item
-                                </button>
+                        <div className="items-list review-items">
+                            <div className="review-items-header">
+                                <div className="header-item-name">Item Name</div>
+                                <div className="header-item-price">Price</div>
                             </div>
-                        </div>
-
-                        <div className="items-list">
                             {billData?.items?.map((item, index) => (
-                                <div key={index} className="item-card">
+                                <div key={index} className="review-item-card">
                                     <div className="item-details">
                                         <div className="item-name">{item.name}</div>
-                                        <div className="item-price">
+                                        <div className="item-price-section">
                                             <input
                                                 type="number"
                                                 value={item.price}
@@ -506,13 +489,56 @@ const BillUploaderMobile = () => {
                                             <button 
                                                 onClick={() => handleRemoveItem(index)}
                                                 className="remove-item-button"
+                                                aria-label="Remove item"
                                             >
-                                                ×
+                                                -
                                             </button>
                                         </div>
                                     </div>
                                 </div>
                             ))}
+                            
+                            {showAddItemForm ? (
+                                <div className="add-item-form">
+                                    <div className="form-group">
+                                        <input
+                                            type="text"
+                                            value={newItem.name}
+                                            onChange={(e) => setNewItem({...newItem, name: e.target.value})}
+                                            placeholder="Item name"
+                                            className="item-input"
+                                            autoFocus
+                                        />
+                                        <input
+                                            type="number"
+                                            value={newItem.price}
+                                            onChange={(e) => setNewItem({...newItem, price: e.target.value})}
+                                            placeholder="Price"
+                                            className="price-input"
+                                            min="0"
+                                            step="0.01"
+                                        />
+                                        <div className="add-item-actions">
+                                            <button onClick={handleAddItem} className="confirm-add-button">
+                                                Add
+                                            </button>
+                                            <button 
+                                                onClick={() => {
+                                                    setShowAddItemForm(false);
+                                                    setNewItem({ name: "", price: 0 });
+                                                }} 
+                                                className="cancel-add-button"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button onClick={handleAddItemClick} className="add-item-trigger">
+                                    Add Item +
+                                </button>
+                            )}
                         </div>
 
                         <div className="bill-summary">
@@ -539,6 +565,17 @@ const BillUploaderMobile = () => {
                                 />
                             </div>
                             <div className="summary-field">
+                                <label>Tip/Others:</label>
+                                <input
+                                    type="number"
+                                    value={summary.tip || 0}
+                                    onChange={(e) => handleSummaryChange("tip", e.target.value)}
+                                    className="summary-input"
+                                    min="0"
+                                    step="0.01"
+                                />
+                            </div>
+                            <div className="summary-field total-field">
                                 <label>Total:</label>
                                 <input
                                     type="number"
@@ -550,11 +587,12 @@ const BillUploaderMobile = () => {
                         </div>
 
                         <div className="step-navigation">
-                            <button onClick={() => setActiveStep(3)} className="next-button" disabled={!billData?.items?.length}>
+                            <button 
+                                onClick={() => setActiveStep(3)} 
+                                className="next-button" 
+                                disabled={!billData?.items?.length}
+                            >
                                 Continue to Assign Items
-                            </button>
-                            <button onClick={() => setActiveStep(1)} className="prev-button">
-                                Back
                             </button>
                         </div>
                     </div>
@@ -565,18 +603,6 @@ const BillUploaderMobile = () => {
                     <div className="mobile-step assign-step">
                         <h2>Assign Items for {currentMember}</h2>
                         
-                        <div className="assignment-progress">
-                            <div className="progress-text">
-                                Member {currentMemberIndex + 1} of {members.length}
-                            </div>
-                            <div className="progress-bar">
-                                <div 
-                                    className="progress-fill" 
-                                    style={{width: `${((currentMemberIndex + 1) / members.length) * 100}%`}}
-                                />
-                            </div>
-                        </div>
-
                         <div className="items-list">
                             <button 
                                 onClick={() => handleAssignAll(currentMember)} 
@@ -618,9 +644,6 @@ const BillUploaderMobile = () => {
                                     Calculate Split
                                 </button>
                             )}
-                            <button onClick={() => setActiveStep(2)} className="prev-button">
-                                Back
-                            </button>
                         </div>
                     </div>
                 );
@@ -722,6 +745,15 @@ const BillUploaderMobile = () => {
         <div className="bill-uploader-mobile">
             {isScanning && <ScannerView progress={scanProgress} />}
             <div className="mobile-header">
+                {activeStep > 1 && (
+                    <button 
+                        onClick={goToPrevStep} 
+                        className="back-arrow"
+                        aria-label="Go back"
+                    >
+                        <div className="back-arrow-icon"></div>
+                    </button>
+                )}
                 <h1 className="mobile-title">Itemized Bill Splitter</h1>
                 <div className="step-indicator">
                     {[1, 2, 3, 4].map(step => (
