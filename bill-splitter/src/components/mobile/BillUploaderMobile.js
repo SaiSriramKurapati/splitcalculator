@@ -19,6 +19,7 @@ const BillUploaderMobile = () => {
     const [summary, setSummary] = useState({ subtotal: 0, tax: 0, total: 0 });
     const [loading, setLoading] = useState(false);
     const [activeStep, setActiveStep] = useState(1); // For mobile step-by-step flow
+    const [storeTitle, setStoreTitle] = useState(""); // Add new state for store title
     
     // New state for adding items
     const [newItem, setNewItem] = useState({ name: "", price: "" });
@@ -32,6 +33,8 @@ const BillUploaderMobile = () => {
     const [scanProgress, setScanProgress] = useState(0);
     const [isScanning, setIsScanning] = useState(false);
     const [showAddItemForm, setShowAddItemForm] = useState(false);
+    const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+    const [feedbackText, setFeedbackText] = useState('');
 
     // Add useEffect to set default selected member
     useEffect(() => {
@@ -80,6 +83,7 @@ const BillUploaderMobile = () => {
             );
 
             setBillData(response.data);
+            setStoreTitle(response.data.title || ""); // Store the title from API response
             setSummary({
                 subtotal: response.data.subtotal || 0,
                 tax: response.data.tax || 0,
@@ -441,6 +445,15 @@ const BillUploaderMobile = () => {
         return memberName.slice(0, 3).toUpperCase();
     };
 
+    const handleFeedbackSubmit = () => {
+        const emailSubject = 'VAATA App Feedback';
+        const emailBody = `Feedback from user:\n\n${feedbackText}\n\nStore: ${storeTitle}\nTotal Amount: $${summary.total.toFixed(2)}`;
+        const mailtoLink = `mailto:saisriramkurapati@gmail.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+        window.location.href = mailtoLink;
+        setShowFeedbackForm(false);
+        setFeedbackText('');
+    };
+
     // Render different steps based on activeStep
     const renderStep = () => {
         switch (activeStep) {
@@ -746,7 +759,7 @@ const BillUploaderMobile = () => {
                         {/* Summary Section */}
                         <div className="summary-view">
                             <div className="store-total">
-                                <div className="store-name">Publix</div>
+                                <div className="store-name">{storeTitle || "Unknown Store"}</div>
                                 <div className="total-amount">$ {summary.total.toFixed(2)}</div>
                             </div>
                             <div className="members-list-container">
@@ -796,6 +809,47 @@ const BillUploaderMobile = () => {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+
+                        {/* Feedback Section */}
+                        <div className="feedback-section">
+                            <p className="feedback-text">Help us improve VAATA</p>
+                            {!showFeedbackForm ? (
+                                <button 
+                                    onClick={() => setShowFeedbackForm(true)}
+                                    className="feedback-button"
+                                >
+                                    Share Your Experience
+                                </button>
+                            ) : (
+                                <div className="feedback-form">
+                                    <textarea
+                                        value={feedbackText}
+                                        onChange={(e) => setFeedbackText(e.target.value)}
+                                        placeholder="Tell us what you think about VAATA..."
+                                        className="feedback-textarea"
+                                        rows="4"
+                                    />
+                                    <div className="feedback-actions">
+                                        <button 
+                                            onClick={handleFeedbackSubmit}
+                                            className="feedback-submit"
+                                            disabled={!feedbackText.trim()}
+                                        >
+                                            Send Feedback
+                                        </button>
+                                        <button 
+                                            onClick={() => {
+                                                setShowFeedbackForm(false);
+                                                setFeedbackText('');
+                                            }}
+                                            className="feedback-cancel"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 );
