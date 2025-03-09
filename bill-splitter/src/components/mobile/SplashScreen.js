@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import './SplashScreen.css';
 
 const SplashScreen = ({ onComplete }) => {
@@ -7,6 +7,7 @@ const SplashScreen = ({ onComplete }) => {
     const [showSteps, setShowSteps] = useState(false);
     const [activeStep, setActiveStep] = useState(0);
     const [showContinue, setShowContinue] = useState(false);
+    const containerRef = useRef(null);
 
     const steps = [
         { icon: '👥', text: 'Add Members' },
@@ -25,12 +26,33 @@ const SplashScreen = ({ onComplete }) => {
             setShowSteps(true);
             // Animate through each step
             steps.forEach((_, index) => {
-                setTimeout(() => setActiveStep(index), 2000 + (index * 1000));
+                setTimeout(() => {
+                    setActiveStep(index);
+                    // Auto-scroll to the active step
+                    const stepElement = document.querySelector(`.step-item:nth-child(${index + 1})`);
+                    if (stepElement && containerRef.current) {
+                        const containerTop = containerRef.current.offsetTop;
+                        const stepTop = stepElement.offsetTop;
+                        const offset = stepTop - containerTop - 100; // Adjust scroll position
+                        
+                        window.scrollTo({
+                            top: offset,
+                            behavior: 'smooth'
+                        });
+                    }
+                }, 2000 + (index * 1000));
             });
         }, 2000);
 
-        // Show continue button after all steps are shown
-        setTimeout(() => setShowContinue(true), 6000);
+        // Show continue button after all steps
+        setTimeout(() => {
+            setShowContinue(true);
+            // Scroll to the continue button
+            const buttonElement = document.querySelector('.continue-button');
+            if (buttonElement) {
+                buttonElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 6000);
     }, []);
 
     const handleContinue = () => {
@@ -40,7 +62,7 @@ const SplashScreen = ({ onComplete }) => {
     };
 
     return (
-        <div className="splash-screen">
+        <div className="splash-screen" ref={containerRef}>
             <div className={`splash-content ${showContent ? 'show' : ''}`}>
                 <div className="welcome-text">Welcome to</div>
                 <h1 className="splash-logo">VAATA</h1>
