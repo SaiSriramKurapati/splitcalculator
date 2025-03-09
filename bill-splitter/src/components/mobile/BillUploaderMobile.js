@@ -715,7 +715,10 @@ const BillUploaderMobile = () => {
                         <div className="step-navigation">
                             {currentMemberIndex < members.length - 1 ? (
                                 <button 
-                                    onClick={() => setCurrentMemberIndex(prev => prev + 1)} 
+                                    onClick={() => {
+                                        setCurrentMemberIndex(prev => prev + 1);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }} 
                                     className="next-member-button"
                                 >
                                     Next Member

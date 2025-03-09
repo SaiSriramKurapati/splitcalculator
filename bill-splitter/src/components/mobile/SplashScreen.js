@@ -44,7 +44,7 @@ const SplashScreen = ({ onComplete }) => {
                             behavior: 'smooth'
                         });
                     }
-                }, 2000 + (index * 200));
+                }, 500 + (index * 500));
             });
         }, 2000);
 
