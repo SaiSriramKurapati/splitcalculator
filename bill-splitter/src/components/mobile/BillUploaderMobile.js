@@ -4,6 +4,7 @@ import './BillUploaderMobile.css';
 import html2canvas from 'html2canvas';
 import ScannerView from './ScannerView';
 import SplashScreen from './SplashScreen';
+import backArrowIcon from '../../assets/images/ui-elements/back arrow.svg';
 
 const BillUploaderMobile = () => {
     const [showSplash, setShowSplash] = useState(true);
@@ -536,7 +537,7 @@ const BillUploaderMobile = () => {
                     <div className="mobile-step items-step">
                         <h2>Review Details</h2>
                         
-                        <div className="items-list review-items">
+                        <div className="items-list1 review-items">
                             <div className="review-items-header">
                                 <div className="header-item-name">Item Name</div>
                                 <div className="header-item-price">Price</div>
@@ -544,6 +545,25 @@ const BillUploaderMobile = () => {
                             {billData?.items?.map((item, index) => (
                                 <div key={index} className="review-item-card">
                                     <div className="item-details">
+                                        <button 
+                                            onClick={() => handleRemoveItem(index)}
+                                            className="remove-item-button"
+                                            aria-label="Remove item"
+                                            style={{ 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                justifyContent: 'center',
+                                                padding: '0'
+                                            }}
+                                        >
+                                            <span style={{ 
+                                                fontSize: '24px',
+                                                lineHeight: '1',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}>-</span>
+                                        </button>
                                         <div className="item-name">{item.name}</div>
                                         <div className="item-price-section">
                                             <input
@@ -554,13 +574,6 @@ const BillUploaderMobile = () => {
                                                 min="0"
                                                 step="0.01"
                                             />
-                                            <button 
-                                                onClick={() => handleRemoveItem(index)}
-                                                className="remove-item-button"
-                                                aria-label="Remove item"
-                                            >
-                                                -
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -841,7 +854,7 @@ const BillUploaderMobile = () => {
             <div className="mobile-header">
                 {activeStep > 1 && (
                     <button onClick={goToPrevStep} className="back-arrow">
-                        <div className="back-arrow-icon"></div>
+                        <img src={backArrowIcon} alt="Back" className="back-arrow-icon" />
                     </button>
                 )}
                 <h1 className="mobile-title">VAATA</h1>

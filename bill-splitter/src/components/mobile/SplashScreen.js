@@ -7,6 +7,7 @@ const SplashScreen = ({ onComplete }) => {
     const [showSteps, setShowSteps] = useState(false);
     const [activeStep, setActiveStep] = useState(0);
     const [showContinue, setShowContinue] = useState(false);
+    const [showSkip, setShowSkip] = useState(false);
     const containerRef = useRef(null);
 
     const steps = [
@@ -17,6 +18,9 @@ const SplashScreen = ({ onComplete }) => {
     ];
 
     useEffect(() => {
+        // Show skip button immediately
+        setShowSkip(true);
+        
         // Initial welcome animation
         setTimeout(() => setShowContent(true), 500);
         setTimeout(() => setShowTagline(true), 1500);
@@ -40,7 +44,7 @@ const SplashScreen = ({ onComplete }) => {
                             behavior: 'smooth'
                         });
                     }
-                }, 2000 + (index * 1000));
+                }, 2000 + (index * 200));
             });
         }, 2000);
 
@@ -52,22 +56,30 @@ const SplashScreen = ({ onComplete }) => {
             if (buttonElement) {
                 buttonElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
-        }, 6000);
+        }, 3000);
     }, []);
 
     const handleContinue = () => {
         const element = document.querySelector('.splash-screen');
+        if (!element) return;
+        
         element.classList.add('fade-out');
         setTimeout(onComplete, 500);
     };
 
     return (
         <div className="splash-screen" ref={containerRef}>
+            <button 
+                className={`skip-button ${showSkip ? 'show' : ''}`}
+                onClick={handleContinue}
+            >
+                Skip
+            </button>
             <div className={`splash-content ${showContent ? 'show' : ''}`}>
                 <div className="welcome-text">Welcome to</div>
                 <h1 className="splash-logo">VAATA</h1>
                 <p className={`splash-tagline ${showTagline ? 'show' : ''}`}>
-                    Fair Shares, Clear Splits
+                    Divide with ease, Pay with peace
                 </p>
                 
                 <div className={`steps-container ${showSteps ? 'show' : ''}`}>

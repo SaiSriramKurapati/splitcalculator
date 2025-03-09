@@ -15,7 +15,6 @@
     position: relative;
     padding: 1rem;
     text-align: center;
-    border-bottom: 1px solid rgba(27, 78, 124, 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -393,11 +392,18 @@
     font-style: italic;
 }
 
+.items-list1 {
+    display: flex;
+    flex-direction: column;
+    gap: 0px;
+    margin-bottom: 20px;
+}
+
 /* Assign Step */
 .items-list {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 12px;
     margin-bottom: 20px;
 }
 
@@ -416,10 +422,11 @@
 
 .item-details {
     display: flex;
-    justify-content: flex-start;
-    margin-bottom: 10px;
     align-items: center;
-    gap: 8px;
+    justify-content: space-between;
+    width: 100%;
+    gap: 1rem;
+    padding: 0.5rem;
 }
 
 .assigned-members {
@@ -444,10 +451,10 @@
 }
 
 .item-name {
-    color: #0B3358;
-    font-size: 1.2rem;
-    font-weight: bold;
     flex: 1;
+    font-size: 1.1rem;
+    color: #1B4E7C;
+    margin-right: 1rem;
     word-break: break-word;
     text-align: left;
 }
@@ -458,43 +465,20 @@
     gap: 5px;
 }
 
-.item-price-section .price-input {
-    width: 62px;
-    height: 27px;
-    padding: 8px;
-    border-radius: 20px;
-    border: 1px solid #FFF;
-    background: rgba(255, 255, 255, 0.50);
-    text-align: right;
-    font-size: 16px;
-    color: #1B4E7C;
-}
-
-.item-price-section .price-input::placeholder {
-    color: #A1B7CB;
-    opacity: 0.7;
-}
-
-.item-price-section .price-input:focus {
-    outline: none;
-    border-color: #1B4E7C;
-    box-shadow: 0 0 0 2px rgba(27, 78, 124, 0.1);
-}
-
-.remove-item-button {
-    background-color: #f44336;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 25px;
-    height: 25px;
-    font-size: 18px;
+.item-price-section {
     display: flex;
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    padding: 0;
-    line-height: 1;
+    gap: 0.5rem;
+}
+
+.price-input:focus {
+    border-color: #1B4E7C;
+    box-shadow: 0 0 0 2px rgba(27, 78, 124, 0.1);
+    outline: none;
+}
+
+.price-input::placeholder {
+    color: rgba(27, 78, 124, 0.5);
 }
 
 .item-assignments {
@@ -513,6 +497,7 @@
     border: 1px solid #1B4E7C;
     color: #1B4E7C;
     padding: 8px 16px;
+    height: 40px;
     border-radius: 20px;
     font-size: 14px;
     font-weight: 500;
@@ -569,15 +554,6 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-}
-
-.summary-input {
-    width: 62px;
-    height: 27px;
-    padding: 5px;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    text-align: right;
 }
 
 .summary-input:focus {
@@ -909,40 +885,37 @@
 
 .back-arrow {
     position: absolute;
-    left: 1rem;
+    left: 15px;
     background: none;
     border: none;
-    cursor: pointer;
     padding: 8px;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
+    z-index: 10;
 }
 
 .back-arrow-icon {
     width: 24px;
     height: 24px;
-    background-image: url('../../assets/images/ui-elements/back arrow.svg');
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain;
+    display: block;
 }
 
 .back-arrow:hover {
-    opacity: 0.8;
-    transform: scale(1.1);
+    transform: translateX(-2px);
 }
 
 .back-arrow:active {
-    transform: scale(0.95);
+    transform: translateX(0);
 }
 
 /* Review Items */
 .review-item-card {
     border-radius: 20px;
     background: rgba(27, 78, 124, 0.05);    
-    padding: 16px;
+    padding: 12px;
     margin-bottom: 12px;
 }
 
@@ -971,10 +944,10 @@
 }
 
 .item-price-section .price-input {
-    width: 62px;
-    height: 27px;
+    width: 90px;
+    height: 40px;
     padding: 8px;
-    border-radius: 20px;
+    border-radius: 16px;
     border: 1px solid #FFF;
     background: rgba(255, 255, 255, 0.50);
     text-align: right;
@@ -1041,9 +1014,10 @@
 }
 
 .summary-field .summary-input {
-    width: 62px;
+    width: 90px;
+    height: 40px;
     padding: 8px;
-    border-radius: 20px;
+    border-radius: 16px;
     border: 1px solid #FFF;
     background: rgba(255, 255, 255, 0.50);
     text-align: right;
@@ -1075,9 +1049,9 @@
 /* Add Item Form */
 .add-item-trigger {
     width: 40%;
-    height: 35px;
+    height: 40px;
     padding: 12px;
-    border-radius: 20px;
+    border-radius: 16px;
     border: 1px dashed #1B4E7C;
     background: #D6F0F5;
     color: #1B4E7C;
@@ -1088,7 +1062,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 12px;
 }
 
 .add-item-trigger:hover {
@@ -1191,7 +1165,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 16px 0px 16px;
+    padding: 0 16px 10px 16px;
 }
 
 .header-item-name {

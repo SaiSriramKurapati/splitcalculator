@@ -1,5 +1,6 @@
 import React from 'react';
 import './ScannerView.css';
+import fileIcon from '../../assets/images/ui-elements/file.svg';
 
 const ScannerView = ({ progress }) => {
     return (
@@ -7,7 +8,7 @@ const ScannerView = ({ progress }) => {
             <div className="scanner-content">
                 <h2>Scanning...</h2>
                 <div className="scanner-frame">
-                    <div className="document-icon"></div>
+                    <div className="document-icon" style={{ backgroundImage: `url(${fileIcon})` }}></div>
                     <div className="scan-line"></div>
                 </div>
                 <div className="progress-circle">
