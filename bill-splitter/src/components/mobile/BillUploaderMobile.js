@@ -18,7 +18,7 @@ const BillUploaderMobile = () => {
     const [activeStep, setActiveStep] = useState(1); // For mobile step-by-step flow
     
     // New state for adding items
-    const [newItem, setNewItem] = useState({ name: "", price: 0 });
+    const [newItem, setNewItem] = useState({ name: "", price: "" });
 
     // New state variables
     const [showResults, setShowResults] = useState(false);
@@ -122,7 +122,14 @@ const BillUploaderMobile = () => {
             return;
         }
 
-        const updatedMembers = [...members, memberName];
+        // Capitalize first letter of each word
+        const capitalizedName = memberName
+            .trim()
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+
+        const updatedMembers = [...members, capitalizedName];
         setMembers(updatedMembers);
         setMemberName("");
     };
@@ -200,7 +207,7 @@ const BillUploaderMobile = () => {
         
         setBillData(updatedBillData);
         setSummary(newSummary);
-        setNewItem({ name: "", price: 0 });
+        setNewItem({ name: "", price: "" });
         setShowAddItemForm(false); // Hide the form after adding
     };
     
@@ -372,6 +379,47 @@ const BillUploaderMobile = () => {
         setError(null);
     };
 
+    // Add this new function after the other helper functions
+    const generateSmartInitial = (memberName, allMembers) => {
+        // First try just the first letter
+        const firstLetter = memberName.charAt(0).toUpperCase();
+        const similarFirstLetter = allMembers.filter(m => 
+            m !== memberName && m.charAt(0).toUpperCase() === firstLetter
+        );
+
+        // If no conflicts with first letter, use it
+        if (similarFirstLetter.length === 0) {
+            return firstLetter;
+        }
+
+        // If there are conflicts, try first two letters
+        const firstTwo = memberName.slice(0, 2).toUpperCase();
+        const similarFirstTwo = allMembers.filter(m => 
+            m !== memberName && m.slice(0, 2).toUpperCase() === firstTwo
+        );
+
+        // If no conflicts with first two letters, use them
+        if (similarFirstTwo.length === 0) {
+            return firstTwo;
+        }
+
+        // If still conflicts, use first letter + last letter
+        const lastLetter = memberName.charAt(memberName.length - 1).toUpperCase();
+        const initial = firstLetter + lastLetter;
+        const similarCombo = allMembers.filter(m =>
+            m !== memberName && 
+            m.charAt(0).toUpperCase() + m.charAt(m.length - 1).toUpperCase() === initial
+        );
+
+        // If no conflicts with first+last, use it
+        if (similarCombo.length === 0) {
+            return initial;
+        }
+
+        // If all else fails, use first three letters
+        return memberName.slice(0, 3).toUpperCase();
+    };
+
     // Render different steps based on activeStep
     const renderStep = () => {
         switch (activeStep) {
@@ -525,7 +573,7 @@ const BillUploaderMobile = () => {
                                             <button 
                                                 onClick={() => {
                                                     setShowAddItemForm(false);
-                                                    setNewItem({ name: "", price: 0 });
+                                                    setNewItem({ name: "", price: "" });
                                                 }} 
                                                 className="cancel-add-button"
                                             >
@@ -606,7 +654,7 @@ const BillUploaderMobile = () => {
                         <div className="items-list">
                             <button 
                                 onClick={() => handleAssignAll(currentMember)} 
-                                className="assign-all-button"
+                                className={`assign-all-button ${isAllAssigned(currentMember) ? 'selected' : ''}`}
                             >
                                 {isAllAssigned(currentMember) ? "Unselect All" : "Select All"}
                             </button>
@@ -619,7 +667,13 @@ const BillUploaderMobile = () => {
                                 >
                                     <div className="item-details">
                                         <div className="item-name">{item.name}</div>
-                                        <div className="item-price">${item.price.toFixed(2)}</div>
+                                    </div>
+                                    <div className="assigned-members">
+                                        {assignments[index]?.map(member => (
+                                            <span key={member} className="member-initial">
+                                                {generateSmartInitial(member, members)}
+                                            </span>
+                                        ))}
                                     </div>
                                 </div>
                             ))}
@@ -634,15 +688,17 @@ const BillUploaderMobile = () => {
                                     Next Member
                                 </button>
                             ) : (
-                                <button 
-                                    onClick={() => {
-                                        calculateAndShowResults();
-                                        setActiveStep(4);
-                                    }} 
-                                    className="calculate-button"
-                                >
-                                    Calculate Split
-                                </button>
+                                <div className="calculate-button-container">
+                                    <button 
+                                        className="calculate-button"
+                                        onTouchStart={handleTouchStart}
+                                        onTouchMove={handleTouchMove}
+                                        onTouchEnd={handleTouchEnd}
+                                    >
+                                        <div className="slide-arrow-icon"></div>
+                                        <span className="button-text">Swipe to split bill</span>
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -650,95 +706,105 @@ const BillUploaderMobile = () => {
             case 4: // Results
                 return (
                     <div className="mobile-step results-step">
-                        <div className="results-section" id="split-results">
-                            <div className="results-header">
-                                <h3>Split Results</h3>
-                                <button 
-                                    onClick={downloadResultsAsImage}
-                                    className="download-button"
-                                >
-                                    Download Results
-                                </button>
+                        <h2>Total Breakdown</h2>
+                        {/* Summary Section */}
+                        <div className="summary-view">
+                            <div className="store-total">
+                                <div className="store-name">Publix</div>
+                                <div className="total-amount">$ {summary.total.toFixed(2)}</div>
                             </div>
-
-                            <div className="results-tabs">
-                                <button 
-                                    className={`tab ${view === 'summary' ? 'active' : ''}`}
-                                    onClick={() => setView('summary')}
-                                >
-                                    Summary
-                                </button>
-                                <button 
-                                    className={`tab ${view === 'details' ? 'active' : ''}`}
-                                    onClick={() => setView('details')}
-                                >
-                                    Details
-                                </button>
+                            <div className="members-list-container">
+                                {members.map((member, index) => (
+                                    <div key={index} className="member-total">
+                                        <span>{member}</span>
+                                        <span>$ {totals[member]?.toFixed(2) || '0.00'}</span>
+                                    </div>
+                                ))}
                             </div>
-
-                            {view === 'summary' ? (
-                                <div className="summary-view">
-                                    {members.map((member, index) => (
-                                        <div key={index} className="member-total">
-                                            <span>{member}</span>
-                                            <span>${totals[member]?.toFixed(2) || '0.00'}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="details-view">
-                                    <div className="custom-dropdown">
-                                        <div 
-                                            className="selected-member"
-                                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                        >
-                                            {selectedMember}
-                                            <span className="dropdown-arrow"></span>
-                                        </div>
-                                        {isDropdownOpen && (
-                                            <div className="dropdown-options">
-                                                {members.map((member, index) => (
-                                                    <div 
-                                                        key={index} 
-                                                        className={`dropdown-option ${selectedMember === member ? 'selected' : ''}`}
-                                                        onClick={() => {
-                                                            setSelectedMember(member);
-                                                            setIsDropdownOpen(false);
-                                                        }}
-                                                    >
-                                                        {member}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="member-details">
-                                        <div className="assigned-items">
-                                            {getAssignedItems(selectedMember).map((item, itemIndex) => (
-                                                <div key={itemIndex} className="assigned-item">
-                                                    <span>{item.name}</span>
-                                                    <span>${(item.price / getItemShares(item)).toFixed(2)}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
-                        <div className="step-navigation">
-                            <button 
-                                onClick={() => setActiveStep(3)} 
-                                className="prev-button"
-                            >
-                                Back to Assignments
-                            </button>
+                        {/* Details Section */}
+                        <div className="details-section">
+                            <div className="details-header">
+                                <h3>Assigned Items</h3>
+                            </div>
+                            <div className="custom-dropdown">
+                                <div 
+                                    className="selected-member"
+                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                >
+                                    {selectedMember}
+                                    <span className="dropdown-arrow"></span>
+                                </div>
+                                {isDropdownOpen && (
+                                    <div className="dropdown-options">
+                                        {members.map((member, index) => (
+                                            <div 
+                                                key={index} 
+                                                className={`dropdown-option ${selectedMember === member ? 'selected' : ''}`}
+                                                onClick={() => {
+                                                    setSelectedMember(member);
+                                                    setIsDropdownOpen(false);
+                                                }}
+                                            >
+                                                {member}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="member-details">
+                                {getAssignedItems(selectedMember).map((item, itemIndex) => (
+                                    <div key={itemIndex} className="assigned-item">
+                                        <span>{item.name}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 );
             default:
                 return null;
         }
+    };
+
+    const [touchStart, setTouchStart] = useState(null);
+    const [buttonPosition, setButtonPosition] = useState(0);
+
+    const handleTouchStart = (e) => {
+        setTouchStart(e.touches[0].clientX);
+    };
+
+    const handleTouchMove = (e) => {
+        if (!touchStart) return;
+
+        const currentTouch = e.touches[0].clientX;
+        const diff = currentTouch - touchStart;
+        const maxSlide = (e.target.parentElement.offsetWidth - e.target.offsetWidth) - 20; // Reduced by 20px
+        
+        // Restrict sliding to right direction only and max container width minus button width
+        const newPosition = Math.max(0, Math.min(diff, maxSlide));
+        setButtonPosition(newPosition);
+        
+        e.target.style.transform = `translateX(${newPosition}px)`;
+    };
+
+    const handleTouchEnd = (e) => {
+        const container = e.target.parentElement;
+        const maxSlide = (container.offsetWidth - e.target.offsetWidth) - 20; // Reduced by 20px
+        const threshold = maxSlide * 0.75; // 75% of available slide distance
+
+        if (buttonPosition >= threshold) {
+            // Successful slide
+            calculateAndShowResults();
+            setActiveStep(4);
+        } else {
+            // Reset position if not slid far enough
+            e.target.style.transform = 'translateX(0)';
+        }
+
+        setTouchStart(null);
+        setButtonPosition(0);
     };
 
     return (
