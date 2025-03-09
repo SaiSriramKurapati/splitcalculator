@@ -3,8 +3,10 @@ import axios from 'axios';
 import './BillUploaderMobile.css';
 import html2canvas from 'html2canvas';
 import ScannerView from './ScannerView';
+import SplashScreen from './SplashScreen';
 
 const BillUploaderMobile = () => {
+    const [showSplash, setShowSplash] = useState(true);
     // Same state variables as desktop version
     const [file, setFile] = useState(null);
     const [billData, setBillData] = useState(null);
@@ -248,11 +250,19 @@ const BillUploaderMobile = () => {
         let subTotal = 0;
     
         const updatedAssignments = { ...assignments };
+        const hasAnyAssignments = Object.values(updatedAssignments).some(arr => arr && arr.length > 0);
     
-        // Ensure all items are assigned for calculations
+        // If no assignments were made, default to equal split
+        if (!hasAnyAssignments) {
+            billData.items.forEach((item, index) => {
+                updatedAssignments[index] = [...members];
+            });
+        }
+    
+        // Calculate splits based on assignments
         billData.items.forEach((item, index) => {
             if (!updatedAssignments[index] || updatedAssignments[index].length === 0) {
-                // Assign all members if no one is assigned
+                // If no one is assigned to this item, split equally
                 updatedAssignments[index] = [...members];
             }
     
@@ -316,7 +326,17 @@ const BillUploaderMobile = () => {
     };
 
     const goToPrevStep = () => {
-        setActiveStep(prev => Math.max(prev - 1, 1));
+        if (activeStep === 3) {
+            // If we're on step 3 and there are previous members, go to previous member
+            if (currentMemberIndex > 0) {
+                setCurrentMemberIndex(prev => prev - 1);
+            } else {
+                // Only go back to step 2 if we're at the first member
+                setActiveStep(2);
+            }
+        } else {
+            setActiveStep(prev => Math.max(prev - 1, 1));
+        }
     };
 
     // Helper functions for item assignment
@@ -683,7 +703,7 @@ const BillUploaderMobile = () => {
                             {currentMemberIndex < members.length - 1 ? (
                                 <button 
                                     onClick={() => setCurrentMemberIndex(prev => prev + 1)} 
-                                    className="next-button"
+                                    className="next-member-button"
                                 >
                                     Next Member
                                 </button>
@@ -807,28 +827,24 @@ const BillUploaderMobile = () => {
         setButtonPosition(0);
     };
 
+    const handleSplashComplete = () => {
+        setShowSplash(false);
+    };
+
+    if (showSplash) {
+        return <SplashScreen onComplete={handleSplashComplete} />;
+    }
+
     return (
         <div className="bill-uploader-mobile">
             {isScanning && <ScannerView progress={scanProgress} />}
             <div className="mobile-header">
                 {activeStep > 1 && (
-                    <button 
-                        onClick={goToPrevStep} 
-                        className="back-arrow"
-                        aria-label="Go back"
-                    >
+                    <button onClick={goToPrevStep} className="back-arrow">
                         <div className="back-arrow-icon"></div>
                     </button>
                 )}
-                <h1 className="mobile-title">Itemized Bill Splitter</h1>
-                <div className="step-indicator">
-                    {[1, 2, 3, 4].map(step => (
-                        <div 
-                            key={step} 
-                            className={`step-dot ${activeStep >= step ? "active" : ""}`}
-                        />
-                    ))}
-                </div>
+                <h1 className="mobile-title">VAATA</h1>
             </div>
             {renderStep()}
         </div>

@@ -15,13 +15,41 @@
     position: relative;
     padding: 1rem;
     text-align: center;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid rgba(27, 78, 124, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .mobile-header h1 {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 2.2rem;
     color: #1B4E7C;
+    font-weight: 800;
+    flex: 1;
+    text-align: center;
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: 4px;
+    text-shadow: 2px 2px 0px rgba(27, 78, 124, 0.1);
+    background: linear-gradient(135deg, #1B4E7C 0%, #2C7AAC 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-transform: uppercase;
+    position: relative;
+    padding: 0 10px;
+}
+
+.mobile-header h1::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #1B4E7C, transparent);
+    border-radius: 2px;
 }
 
 .step-indicator {
@@ -384,11 +412,6 @@
 .item-card.selected {
     border-color: #1B4E7C;
     background-color: rgba(27, 78, 124, 0.05);
-}
-
-.item-card:hover {
-    border-color: rgba(27, 78, 124, 0.3);
-    background-color: rgba(27, 78, 124, 0.03);
 }
 
 .item-details {
@@ -774,7 +797,7 @@
 .selected-member {
     background: white;
     padding: 12px 16px;
-    border-radius: 10px;
+    border-radius: 16px;
     border: 1px solid #ddd;
     display: flex;
     justify-content: space-between;
@@ -887,8 +910,6 @@
 .back-arrow {
     position: absolute;
     left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
     background: none;
     border: none;
     cursor: pointer;
@@ -910,11 +931,11 @@
 
 .back-arrow:hover {
     opacity: 0.8;
-    transform: translateY(-50%) scale(1.1);
+    transform: scale(1.1);
 }
 
 .back-arrow:active {
-    transform: translateY(-50%) scale(0.95);
+    transform: scale(0.95);
 }
 
 /* Review Items */
@@ -1076,8 +1097,8 @@
 
 .add-item-form {
     margin-top: 16px;
-    padding: 16px;
-    border-radius: 20px;
+    padding: 20px;
+    border-radius: 16px;
     background: rgba(27, 78, 124, 0.05);
     border: 1px solid #E0E0E0;
 }
@@ -1091,7 +1112,7 @@
 .add-item-form .item-input {
     padding: 12px;
     border: 1px solid #E0E0E0;
-    border-radius: 30px;
+    border-radius: 16px;
     font-size: 16px;
     width: 100%;
 }
@@ -1110,7 +1131,7 @@
 .add-item-form .price-input {
     padding: 12px;
     border: 1px solid #E0E0E0;
-    border-radius: 30px;
+    border-radius: 16px;
     font-size: 16px;
     width: 100%;
 }
@@ -1247,4 +1268,36 @@
 .member-selector,
 .member-dropdown {
     display: none;
+}
+
+.step-buttons {
+    display: none;
+}
+
+.skip-member-button {
+    display: none;
+}
+
+.next-member-button {
+    padding: 16px;
+    border-radius: 30px;
+    background: #1B4E7C;
+    color: #CEE2D4;
+    text-align: center;
+    font-size: 18px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
+    border: none;
+    width: 80%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.next-member-button:hover {
+    background: #153d63;
+}
+
+.next-member-button:active {
+    background: #0d2941;
 } 
