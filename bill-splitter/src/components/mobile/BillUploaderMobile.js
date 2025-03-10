@@ -5,6 +5,10 @@ import html2canvas from 'html2canvas';
 import ScannerView from './ScannerView';
 import SplashScreen from './SplashScreen';
 import backArrowIcon from '../../assets/images/ui-elements/back arrow.svg';
+import emailjs from '@emailjs/browser';
+
+// Initialize EmailJS with your public key
+emailjs.init("YOUR_PUBLIC_KEY");
 
 const BillUploaderMobile = () => {
     const [showSplash, setShowSplash] = useState(true);
@@ -35,6 +39,9 @@ const BillUploaderMobile = () => {
     const [showAddItemForm, setShowAddItemForm] = useState(false);
     const [showFeedbackForm, setShowFeedbackForm] = useState(false);
     const [feedbackText, setFeedbackText] = useState('');
+    const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+    const [feedbackError, setFeedbackError] = useState('');
+    const [showThankYou, setShowThankYou] = useState(false);
 
     // Add useEffect to set default selected member
     useEffect(() => {
@@ -445,13 +452,36 @@ const BillUploaderMobile = () => {
         return memberName.slice(0, 3).toUpperCase();
     };
 
-    const handleFeedbackSubmit = () => {
-        const emailSubject = 'VAATA App Feedback';
-        const emailBody = `Feedback from user:\n\n${feedbackText}\n\nStore: ${storeTitle}\nTotal Amount: $${summary.total.toFixed(2)}`;
-        const mailtoLink = `mailto:saisriramkurapati@gmail.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
-        window.location.href = mailtoLink;
-        setShowFeedbackForm(false);
-        setFeedbackText('');
+    const handleFeedbackSubmit = async () => {
+        setIsSendingFeedback(true);
+        setFeedbackError('');
+
+        try {
+            const templateParams = {
+                feedback: feedbackText,
+                store: storeTitle || 'Unknown Store',
+                total_amount: summary.total.toFixed(2),
+            };
+
+            await emailjs.send(
+                'service_tyt4mqt',
+                'template_abtvz2t',
+                templateParams,
+                '3xkfQ5Fq93eFYn4rd'
+            );
+
+            setShowFeedbackForm(false);
+            setFeedbackText('');
+            setShowThankYou(true);
+            setTimeout(() => {
+                setShowThankYou(false);
+            }, 3000); // Hide thank you message after 3 seconds
+        } catch (error) {
+            console.error('Error sending feedback:', error);
+            setFeedbackError('Failed to send feedback. Please try again.');
+        } finally {
+            setIsSendingFeedback(false);
+        }
     };
 
     // Render different steps based on activeStep
@@ -813,42 +843,55 @@ const BillUploaderMobile = () => {
 
                         {/* Feedback Section */}
                         <div className="feedback-section">
-                            <p className="feedback-text">Help us improve VAATA</p>
-                            {!showFeedbackForm ? (
-                                <button 
-                                    onClick={() => setShowFeedbackForm(true)}
-                                    className="feedback-button"
-                                >
-                                    Share Your Experience
-                                </button>
-                            ) : (
-                                <div className="feedback-form">
-                                    <textarea
-                                        value={feedbackText}
-                                        onChange={(e) => setFeedbackText(e.target.value)}
-                                        placeholder="Tell us what you think about VAATA..."
-                                        className="feedback-textarea"
-                                        rows="4"
-                                    />
-                                    <div className="feedback-actions">
-                                        <button 
-                                            onClick={handleFeedbackSubmit}
-                                            className="feedback-submit"
-                                            disabled={!feedbackText.trim()}
-                                        >
-                                            Send Feedback
-                                        </button>
-                                        <button 
-                                            onClick={() => {
-                                                setShowFeedbackForm(false);
-                                                setFeedbackText('');
-                                            }}
-                                            className="feedback-cancel"
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
+                            {showThankYou ? (
+                                <div className="thank-you-message">
+                                    <div className="thank-you-icon">✓</div>
+                                    <p className="thank-you-text">Thank you for your feedback!</p>
+                                    <p className="thank-you-subtext">We appreciate your help in making VAATA better.</p>
                                 </div>
+                            ) : (
+                                <>
+                                    <p className="feedback-text">Help us improve VAATA</p>
+                                    {!showFeedbackForm ? (
+                                        <button 
+                                            onClick={() => setShowFeedbackForm(true)}
+                                            className="feedback-button"
+                                        >
+                                            Share Your Experience
+                                        </button>
+                                    ) : (
+                                        <div className="feedback-form">
+                                            <textarea
+                                                value={feedbackText}
+                                                onChange={(e) => setFeedbackText(e.target.value)}
+                                                placeholder="Tell us what you think about VAATA..."
+                                                className="feedback-textarea"
+                                                rows="4"
+                                            />
+                                            {feedbackError && <p className="feedback-error">{feedbackError}</p>}
+                                            <div className="feedback-actions">
+                                                <button 
+                                                    onClick={handleFeedbackSubmit}
+                                                    className="feedback-submit"
+                                                    disabled={!feedbackText.trim() || isSendingFeedback}
+                                                >
+                                                    {isSendingFeedback ? 'Sending...' : 'Send Feedback'}
+                                                </button>
+                                                <button 
+                                                    onClick={() => {
+                                                        setShowFeedbackForm(false);
+                                                        setFeedbackText('');
+                                                        setFeedbackError('');
+                                                    }}
+                                                    className="feedback-cancel"
+                                                    disabled={isSendingFeedback}
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>
