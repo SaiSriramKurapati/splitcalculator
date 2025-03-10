@@ -15,6 +15,7 @@ const BillUploaderMobile = () => {
     // Add new state for retry attempts
     const [retryAttempts, setRetryAttempts] = useState(0);
     const [showErrorUI, setShowErrorUI] = useState(false);
+    const [showMemberAlert, setShowMemberAlert] = useState(false);
     // Same state variables as desktop version
     const [file, setFile] = useState(null);
     const [billData, setBillData] = useState(null);
@@ -64,6 +65,11 @@ const BillUploaderMobile = () => {
             return;
         }
 
+        if (members.length === 0) {
+            setShowMemberAlert(true);
+            return;
+        }
+
         const formData = new FormData();
         formData.append('bill', file);
 
@@ -83,8 +89,9 @@ const BillUploaderMobile = () => {
         }, 100);
 
         try {
+            const backendUrl = process.env.BACKEND_URL || 'https://splitcalculator-backend.onrender.com';
             const response = await axios.post(
-                'https://splitcalculator-backend.onrender.com/api/bills/upload1',
+                `${backendUrl}/api/bills/upload`,
                 formData,
                 {
                     headers: {
@@ -388,31 +395,163 @@ const BillUploaderMobile = () => {
 
     // Add new function for downloading results as image
     const downloadResultsAsImage = async () => {
-        const resultsElement = document.getElementById('split-results');
-        if (!resultsElement) return;
-
         try {
-            // Add temporary class for better image capture
-            resultsElement.classList.add('capturing');
+            // Create a temporary container for the complete results
+            const tempContainer = document.createElement('div');
+            tempContainer.style.background = 'white';
+            tempContainer.style.padding = '24px';
+            tempContainer.style.borderRadius = '20px';
+            tempContainer.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+            tempContainer.style.width = '100%';
+            tempContainer.style.maxWidth = '600px';
+            tempContainer.style.margin = '0 auto';
             
-            const canvas = await html2canvas(resultsElement, {
-                backgroundColor: '#ffffff',
-                scale: 2, // Higher resolution
-                logging: false,
-                useCORS: true
+            // Add store total section
+            const storeTotalSection = document.createElement('div');
+            storeTotalSection.style.textAlign = 'center';
+            storeTotalSection.style.padding = '16px 0';
+            
+            const storeName = document.createElement('div');
+            storeName.textContent = storeTitle || "Unknown Store";
+            storeName.style.color = '#0B3358';
+            storeName.style.fontSize = '24px';
+            storeName.style.fontWeight = '600';
+            storeName.style.marginBottom = '8px';
+            
+            const totalAmount = document.createElement('div');
+            totalAmount.textContent = `$ ${summary.total.toFixed(2)}`;
+            totalAmount.style.color = '#0B3358';
+            totalAmount.style.fontSize = '48px';
+            totalAmount.style.fontWeight = '600';
+            
+            storeTotalSection.appendChild(storeName);
+            storeTotalSection.appendChild(totalAmount);
+            tempContainer.appendChild(storeTotalSection);
+            
+            // Add members breakdown section
+            const membersSection = document.createElement('div');
+            membersSection.style.marginTop = '24px';
+            
+            members.forEach((member, index) => {
+                const memberRow = document.createElement('div');
+                memberRow.style.display = 'flex';
+                memberRow.style.justifyContent = 'space-between';
+                memberRow.style.alignItems = 'center';
+                memberRow.style.padding = '12px 48px';
+                memberRow.style.position = 'relative';
+                
+                const memberName = document.createElement('span');
+                memberName.textContent = member;
+                memberName.style.color = '#051B2E';
+                memberName.style.fontSize = '20px';
+                memberName.style.fontWeight = '600';
+                memberName.style.textAlign = 'center';
+                memberName.style.flex = '1';
+                
+                const memberAmount = document.createElement('span');
+                memberAmount.textContent = `$ ${totals[member]?.toFixed(2) || '0.00'}`;
+                memberAmount.style.color = '#0B3358';
+                memberAmount.style.fontSize = '20px';
+                memberAmount.style.fontWeight = '600';
+                memberAmount.style.textAlign = 'right';
+                memberAmount.style.flex = '1';
+                
+                memberRow.appendChild(memberName);
+                memberRow.appendChild(memberAmount);
+                
+                if (index < members.length - 1) {
+                    const divider = document.createElement('div');
+                    divider.style.position = 'absolute';
+                    divider.style.bottom = '-8px';
+                    divider.style.left = '24px';
+                    divider.style.right = '24px';
+                    divider.style.height = '1px';
+                    divider.style.backgroundImage = 'linear-gradient(to right, rgba(161, 183, 203, 0.70) 8px, transparent 8px)';
+                    divider.style.backgroundSize = '16px 1px';
+                    divider.style.backgroundRepeat = 'repeat-x';
+                    memberRow.appendChild(divider);
+                }
+                
+                membersSection.appendChild(memberRow);
             });
             
-            // Remove temporary class
-            resultsElement.classList.remove('capturing');
-
-            // Create download link
-            const image = canvas.toDataURL('image/png');
+            tempContainer.appendChild(membersSection);
+            
+            // Add assigned items section
+            const assignedItemsSection = document.createElement('div');
+            assignedItemsSection.style.marginTop = '32px';
+            assignedItemsSection.style.paddingTop = '24px';
+            assignedItemsSection.style.borderTop = '1px solid rgba(27, 78, 124, 0.1)';
+            
+            const assignedItemsTitle = document.createElement('h3');
+            assignedItemsTitle.textContent = 'Assigned Items';
+            assignedItemsTitle.style.color = '#1B4E7C';
+            assignedItemsTitle.style.fontSize = '20px';
+            assignedItemsTitle.style.textAlign = 'center';
+            assignedItemsTitle.style.marginBottom = '20px';
+            assignedItemsSection.appendChild(assignedItemsTitle);
+            
+            members.forEach(member => {
+                const memberSection = document.createElement('div');
+                memberSection.style.marginBottom = '20px';
+                
+                const memberName = document.createElement('h4');
+                memberName.textContent = member;
+                memberName.style.color = '#051B2E';
+                memberName.style.fontSize = '20px';
+                memberName.style.marginBottom = '12px';
+                memberName.style.textAlign = 'center';
+                memberSection.appendChild(memberName);
+                
+                const itemsList = document.createElement('div');
+                itemsList.style.display = 'flex';
+                itemsList.style.flexDirection = 'column';
+                itemsList.style.gap = '8px';
+                
+                const assignedItems = getAssignedItems(member);
+                assignedItems.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.textContent = item.name;
+                    itemDiv.style.color = '#0B3358';
+                    itemDiv.style.fontSize = '14px';
+                    itemDiv.style.padding = '8px 0';
+                    itemDiv.style.borderBottom = '1px solid rgba(27, 78, 124, 0.1)';
+                    itemsList.appendChild(itemDiv);
+                });
+                
+                memberSection.appendChild(itemsList);
+                assignedItemsSection.appendChild(memberSection);
+            });
+            
+            tempContainer.appendChild(assignedItemsSection);
+            
+            // Add the container to the document temporarily
+            document.body.appendChild(tempContainer);
+            
+            // Capture the image
+            const canvas = await html2canvas(tempContainer, {
+                backgroundColor: '#ffffff',
+                scale: 2,
+                logging: false,
+                useCORS: true,
+                width: tempContainer.offsetWidth,
+                height: tempContainer.offsetHeight
+            });
+            
+            // Remove the temporary container
+            document.body.removeChild(tempContainer);
+            
+            // Create and trigger download
             const link = document.createElement('a');
             link.download = 'split-results.png';
-            link.href = image;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
+            
         } catch (error) {
             console.error('Error generating image:', error);
+            alert('Failed to generate image. Please try again.');
         }
     };
 
@@ -508,12 +647,18 @@ const BillUploaderMobile = () => {
                                 <input
                                     type="text"
                                     value={memberName}
-                                    onChange={(e) => setMemberName(e.target.value)}
+                                    onChange={(e) => {
+                                        setMemberName(e.target.value);
+                                        setShowMemberAlert(false);
+                                    }}
                                     placeholder="Add members"
                                     className="member-input"
                                 />
                                 <div className="member-icon"></div>
                             </div>
+                            {showMemberAlert && (
+                                <div className="member-alert">Add a member to proceed</div>
+                            )}
                             <div className="add-button-container">
                                 <button onClick={handleAddMember} className="add-button">
                                     Add
@@ -798,7 +943,7 @@ const BillUploaderMobile = () => {
                     <div className="mobile-step results-step">
                         <h2>Total Breakdown</h2>
                         {/* Summary Section */}
-                        <div className="summary-view">
+                        <div className="summary-view" id="split-results">
                             <div className="store-total">
                                 <div className="store-name">{storeTitle || "Unknown Store"}</div>
                                 <div className="total-amount">$ {summary.total.toFixed(2)}</div>
@@ -852,17 +997,24 @@ const BillUploaderMobile = () => {
                             </div>
                         </div>
 
+                        {/* Share Options */}
+                        <div className="share-options">
+                            <button onClick={downloadResultsAsImage} className="share-button">
+                                Download Results
+                            </button>
+                        </div>
+
                         {/* Feedback Section */}
                         <div className="feedback-section">
                             {showThankYou ? (
                                 <div className="thank-you-message">
                                     <div className="thank-you-icon">✓</div>
                                     <p className="thank-you-text">Thank you for your feedback!</p>
-                                    <p className="thank-you-subtext">We appreciate your help in making VAATA better.</p>
+                                    <p className="thank-you-subtext">We appreciate your help in making VAAATA better.</p>
                                 </div>
                             ) : (
                                 <>
-                                    <p className="feedback-text">Help us improve VAATA</p>
+                                    <p className="feedback-text">Help us improve VAAATA</p>
                                     {!showFeedbackForm ? (
                                         <button 
                                             onClick={() => setShowFeedbackForm(true)}
@@ -875,7 +1027,7 @@ const BillUploaderMobile = () => {
                                             <textarea
                                                 value={feedbackText}
                                                 onChange={(e) => setFeedbackText(e.target.value)}
-                                                placeholder="Tell us what you think about VAATA..."
+                                                placeholder="Tell us what you think about VAAATA..."
                                                 className="feedback-textarea"
                                                 rows="4"
                                             />
