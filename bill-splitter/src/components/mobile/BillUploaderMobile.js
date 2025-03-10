@@ -89,9 +89,8 @@ const BillUploaderMobile = () => {
         }, 100);
 
         try {
-            const backendUrl = process.env.BACKEND_URL || 'https://splitcalculator-backend.onrender.com';
             const response = await axios.post(
-                `${backendUrl}/api/bills/upload`,
+                '/api/bills/upload',
                 formData,
                 {
                     headers: {

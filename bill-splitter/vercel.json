@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://splitcalculator-backend.onrender.com/api/:path*"
+    }
+  ]
+} 
