@@ -77,21 +77,24 @@ const SplashScreen = ({ onComplete }) => {
             </button>
             <div className={`splash-content ${showContent ? 'show' : ''}`}>
                 <div className="welcome-text">Welcome to</div>
-                <h1 className="splash-logo">VAATA</h1>
+                <h1 className="splash-logo">VAAATA</h1>
                 <p className={`splash-tagline ${showTagline ? 'show' : ''}`}>
                     Divide with ease, Pay with peace
                 </p>
                 
                 <div className={`steps-container ${showSteps ? 'show' : ''}`}>
                     {steps.map((step, index) => (
-                        <div 
-                            key={index}
-                            className={`step-item ${index <= activeStep ? 'active' : ''}`}
-                        >
-                            <span className="step-icon">{step.icon}</span>
-                            <span className="step-text">{step.text}</span>
-                            {index < steps.length - 1 && <span className="step-arrow">→</span>}
-                        </div>
+                        <React.Fragment key={index}>
+                            <div 
+                                className={`step-item ${index <= activeStep ? 'active' : ''}`}
+                            >
+                                <span className="step-icon">{step.icon}</span>
+                                <span className="step-text">{step.text}</span>
+                            </div>
+                            {index < steps.length - 1 && (
+                                <div className="step-arrow">↓</div>
+                            )}
+                        </React.Fragment>
                     ))}
                 </div>
 
