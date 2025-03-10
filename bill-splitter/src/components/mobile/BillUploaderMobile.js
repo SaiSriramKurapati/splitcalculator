@@ -12,6 +12,9 @@ emailjs.init("YOUR_PUBLIC_KEY");
 
 const BillUploaderMobile = () => {
     const [showSplash, setShowSplash] = useState(true);
+    // Add new state for retry attempts
+    const [retryAttempts, setRetryAttempts] = useState(0);
+    const [showErrorUI, setShowErrorUI] = useState(false);
     // Same state variables as desktop version
     const [file, setFile] = useState(null);
     const [billData, setBillData] = useState(null);
@@ -66,6 +69,7 @@ const BillUploaderMobile = () => {
 
         setLoading(true);
         setIsScanning(true);
+        setShowErrorUI(false);
 
         // Simulate progress updates
         const progressInterval = setInterval(() => {
@@ -80,7 +84,7 @@ const BillUploaderMobile = () => {
 
         try {
             const response = await axios.post(
-                'https://splitcalculator-backend.onrender.com/api/bills/upload',
+                'https://splitcalculator-backend.onrender.com/api/bills/upload1',
                 formData,
                 {
                     headers: {
@@ -90,7 +94,7 @@ const BillUploaderMobile = () => {
             );
 
             setBillData(response.data);
-            setStoreTitle(response.data.title || ""); // Store the title from API response
+            setStoreTitle(response.data.title || "");
             setSummary({
                 subtotal: response.data.subtotal || 0,
                 tax: response.data.tax || 0,
@@ -98,6 +102,7 @@ const BillUploaderMobile = () => {
             });
             setAssignments({});
             setError(null);
+            setRetryAttempts(0); // Reset retry attempts on success
             
             // Complete the progress
             setScanProgress(100);
@@ -108,13 +113,19 @@ const BillUploaderMobile = () => {
             }, 500);
         } catch (error) {
             console.error("Error uploading the bill:", error);
-            setError("Failed to upload the bill. Please try again.");
+            setRetryAttempts(prev => prev + 1);
+            setShowErrorUI(true);
             setIsScanning(false);
             setScanProgress(0);
         } finally {
             clearInterval(progressInterval);
             setLoading(false);
         }
+    };
+
+    const handleRetry = () => {
+        setShowErrorUI(false);
+        handleScan();
     };
 
     // Initialize empty bill if user skips uploading
@@ -957,9 +968,27 @@ const BillUploaderMobile = () => {
                         <img src={backArrowIcon} alt="Back" className="back-arrow-icon" />
                     </button>
                 )}
-                <h1 className="mobile-title">VAATA</h1>
+                <h1 className="mobile-title">VAAATA</h1>
             </div>
             {renderStep()}
+            {showErrorUI && (
+                <div className="error-overlay" onClick={() => setShowErrorUI(false)}>
+                    <div className="error-container" onClick={(e) => e.stopPropagation()}>
+                        <div className="error-icon">⚠️</div>
+                        <h3 className="error-title">Oops! Something went wrong</h3>
+                        <p className="error-message">
+                            {retryAttempts < 3 
+                                ? "We couldn't process your bill. Let's try again!"
+                                : "We're experiencing some technical difficulties. Our team has been notified and we'll fix this soon. Please try again later."}
+                        </p>
+                        {retryAttempts < 3 && (
+                            <button onClick={handleRetry} className="retry-button">
+                                Try Again
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

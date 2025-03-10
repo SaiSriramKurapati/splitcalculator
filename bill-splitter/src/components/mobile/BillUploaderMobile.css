@@ -84,6 +84,7 @@
     font-size: 1.2rem;
     margin-bottom: 15px;
     text-align: center;
+    color: #1B4E7C;
 }
 
 /* Upload Step */
@@ -265,8 +266,8 @@
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     background-image: url('../../assets/images/ui-elements/add-member.svg');
     background-repeat: no-repeat;
     background-position: center;
@@ -330,7 +331,7 @@
     background: none;
     border: none;
     color: #666;
-    font-size: 2rem;
+    font-size: 1.5rem;
     cursor: pointer;
     padding: 0 4px;
     line-height: 1;
@@ -338,6 +339,11 @@
     align-items: center;
     justify-content: center;
     transition: color 0.2s ease;
+    width: 24px;
+    height: 24px;
+    margin-left: 4px;
+    position: relative;
+    top: -1px;
 }
 
 .remove-member:hover {
@@ -1481,5 +1487,86 @@
     }
     to {
         transform: scale(1);
+    }
+}
+
+.error-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+.error-container {
+    background: white;
+    border-radius: 20px;
+    padding: 32px;
+    margin: 20px;
+    text-align: center;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+    max-width: 90%;
+    width: 400px;
+    animation: slideUp 0.3s ease;
+}
+
+.error-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.error-title {
+    color: #FF4D4D;
+    font-size: 1.5rem;
+    margin: 0 0 12px 0;
+    font-weight: 600;
+}
+
+.error-message {
+    color: #666;
+    font-size: 1rem;
+    line-height: 1.5;
+    margin: 0 0 24px 0;
+}
+
+.retry-button {
+    background: #1B4E7C;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 12px 32px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 200px;
+}
+
+.retry-button:hover {
+    background: #153d63;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.retry-button:active {
+    transform: translateY(0);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 } 
