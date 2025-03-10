@@ -1,4 +1,5 @@
 import React from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import './App.css';
 import BillUploader from './components/BillUploader';
 import BillUploaderMobile from './components/mobile/BillUploaderMobile';
@@ -10,6 +11,7 @@ function App() {
   return (
     <div className="App">
       {isMobileView ? <BillUploaderMobile /> : <BillUploader />}
+      <Analytics />
     </div>
   );
 }
