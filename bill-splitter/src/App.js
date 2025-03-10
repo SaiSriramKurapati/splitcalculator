@@ -1,5 +1,5 @@
 import React from 'react';
-import { Analytics } from '@vercel/analytics/react';
+import { Analytics } from '@vercel/analytics';
 import './App.css';
 import BillUploader from './components/BillUploader';
 import BillUploaderMobile from './components/mobile/BillUploaderMobile';
