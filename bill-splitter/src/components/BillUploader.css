@@ -1,11 +1,43 @@
 .desktop-message {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    
     align-items: center;
     width: 100%;
     min-height: 100vh;
-    background: linear-gradient(180deg, #CEE2D4 0%, #F4FFF7 100%);
+    background: linear-gradient(135deg, #CEE2D4 0%, #F4FFF7 100%);
     padding: 20px;
+}
+
+.logo-section {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.welcome-text {
+    font-size: 1.5rem;
+    color: #1B4E7C;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.splash-logo {
+    font-size: 4rem;
+    font-weight: 800;
+    margin: 0.5rem 0;
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: 8px;
+    background: linear-gradient(135deg, #1B4E7C 0%, #2C7AAC 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-transform: uppercase;
+    animation: glow 2s ease-in-out infinite alternate;
+}
+
+.splash-tagline {
+    font-size: 1.2rem;
+    color: #1B4E7C;
 }
 
 .message-container {
@@ -30,6 +62,26 @@
     font-size: 16px;
     line-height: 1.5;
     margin-bottom: 24px;
+}
+
+.mobile-message {
+    color: #1B4E7C;
+    font-size: 16px;
+    line-height: 1.5;
+    margin-top: 1rem;
+}
+
+@keyframes glow {
+    from {
+        text-shadow: 0 0 10px rgba(27, 78, 124, 0.2),
+                     0 0 20px rgba(27, 78, 124, 0.1),
+                     0 0 30px rgba(27, 78, 124, 0.1);
+    }
+    to {
+        text-shadow: 0 0 20px rgba(27, 78, 124, 0.3),
+                     0 0 30px rgba(27, 78, 124, 0.2),
+                     0 0 40px rgba(27, 78, 124, 0.1);
+    }
 }
 
 .qr-code {
