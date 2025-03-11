@@ -80,12 +80,13 @@
     opacity: 0.5;
     transform: translateY(20px);
     transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    padding: 1rem;
+    padding: 1.5rem;
     background: rgba(27, 78, 124, 0.05);
     border-radius: 16px;
     backdrop-filter: blur(5px);
-    max-width: 300px;
+    max-width: 400px;
     margin-bottom: 2rem;
+    width: 90%;
 }
 
 .steps-container.show {
@@ -100,19 +101,21 @@
     opacity: 0.3;
     transform: translateX(-10px);
     transition: all 0.5s ease;
-    padding: 0.8rem;
+    padding: 0.8rem 2rem;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.1);
+    width: 100%;
 }
 
 .step-item.active {
     opacity: 1;
     transform: translateX(0);
     background: rgba(255, 255, 255, 0.2);
+    width: 100%;
 }
 
 .step-icon {
-    font-size: 1.5rem;
+    font-size: 1.1rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -121,6 +124,7 @@
     background: white;
     border-radius: 50%;
     box-shadow: 0 2px 8px rgba(27, 78, 124, 0.1);
+    flex-shrink: 0;
 }
 
 .step-text {
@@ -128,6 +132,8 @@
     font-weight: 500;
     font-size: 1rem;
     flex: 1;
+    text-align: left;
+    padding-left: 0.5rem;
 }
 
 .step-arrow {

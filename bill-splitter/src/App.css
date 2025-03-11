@@ -41,19 +41,6 @@
   }
 }
 
-/* Responsive styles */
-@media (max-width: 768px) {
-  .App {
-    padding: 0;
-  }
-}
-
-@media (min-width: 769px) {
-  .App {
-    padding: 20px;
-    max-width: 1200px;
-  }
-}
 
 /* Reset some browser defaults */
 * {

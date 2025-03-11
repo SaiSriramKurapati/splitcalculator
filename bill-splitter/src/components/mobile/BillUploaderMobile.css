@@ -84,6 +84,7 @@
     font-size: 1.2rem;
     margin-bottom: 15px;
     text-align: center;
+    color: #1B4E7C;
 }
 
 /* Upload Step */
@@ -144,7 +145,7 @@
 
 .upload-button {
     background-color: #1B4E7C;
-    color: white;
+    color: #CEE2D4;
     border: none;
     border-radius: 25px;
     padding: 12px 24px;
@@ -186,7 +187,7 @@
 
 .scan-button {
     background-color: #1B4E7C;
-    color: white;
+    color: #CEE2D4;
     border: none;
     border-radius: 25px;
     padding: 12px 24px;
@@ -236,7 +237,7 @@
 .add-member-container {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     margin-bottom: 15px;
 }
 
@@ -260,13 +261,21 @@
     box-shadow: 0 0 0 2px rgba(27, 78, 124, 0.1);
 }
 
+.member-alert {
+    color: #FF4D4D;
+    font-size: 0.9rem;
+    text-align: left;
+    padding-left: 12px;
+    animation: fadeIn 0.3s ease;
+}
+
 .member-icon {
     position: absolute;
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     background-image: url('../../assets/images/ui-elements/add-member.svg');
     background-repeat: no-repeat;
     background-position: center;
@@ -278,14 +287,15 @@
     display: flex;
     justify-content: center;
     width: 100%;
+    margin-top: 4px;
 }
 
 .add-button {
     padding: 12px 40px;
     background-color: #1B4E7C;
-    color: white;
+    color: #CEE2D4;
     border: none;
-    border-radius: 8px;
+    border-radius: 16px;
     font-size: 1rem;
     font-weight: 500;
     cursor: pointer;
@@ -330,7 +340,7 @@
     background: none;
     border: none;
     color: #666;
-    font-size: 2rem;
+    font-size: 1.5rem;
     cursor: pointer;
     padding: 0 4px;
     line-height: 1;
@@ -338,6 +348,11 @@
     align-items: center;
     justify-content: center;
     transition: color 0.2s ease;
+    width: 24px;
+    height: 24px;
+    margin-left: 4px;
+    position: relative;
+    top: -1px;
 }
 
 .remove-member:hover {
@@ -497,9 +512,9 @@
     border: 1px solid #1B4E7C;
     color: #1B4E7C;
     padding: 8px 16px;
-    height: 40px;
+    height: 45px;
     border-radius: 20px;
-    font-size: 14px;
+    font-size: 1rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1133,7 +1148,7 @@
     background-color: #1B4E7C;
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: 16px;
     font-size: 16px;
     font-weight: 500;
     cursor: pointer;
@@ -1150,7 +1165,7 @@
     background-color: #f5f5f5;
     color: #666;
     border: 1px solid #ddd;
-    border-radius: 6px;
+    border-radius: 16px;
     font-size: 16px;
     font-weight: 500;
     cursor: pointer;
@@ -1297,28 +1312,24 @@
 }
 
 .feedback-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 16px 32px;
     background: #1B4E7C;
     color: #CEE2D4;
+    border: none;
+    padding: 16px 32px;
     border-radius: 30px;
-    text-decoration: none;
-    font-size: 18px;
-    font-weight: 400;
-    transition: all 0.2s ease;
-    width: 80%;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
     max-width: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.feedback-button:hover {
-    background: #153d63;
-    transform: translateY(-1px);
-}
 
 .feedback-button:active {
-    background: #0d2941;
     transform: translateY(0);
 }
 
@@ -1482,4 +1493,139 @@
     to {
         transform: scale(1);
     }
+}
+
+.error-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+.error-container {
+    background: white;
+    border-radius: 20px;
+    padding: 32px;
+    margin: 20px;
+    text-align: center;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+    max-width: 90%;
+    width: 400px;
+    animation: slideUp 0.3s ease;
+}
+
+.error-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.error-title {
+    color: #FF4D4D;
+    font-size: 1.5rem;
+    margin: 0 0 12px 0;
+    font-weight: 600;
+}
+
+.error-message {
+    color: #666;
+    font-size: 1rem;
+    line-height: 1.5;
+    margin: 0 0 24px 0;
+}
+
+.retry-button {
+    background: #1B4E7C;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 12px 32px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 200px;
+}
+
+.retry-button:hover {
+    background: #153d63;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.retry-button:active {
+    transform: translateY(0);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.share-options {
+    display: flex;
+    justify-content: center;
+    margin: 24px 0;
+    padding: 0 16px;
+}
+
+.share-button {
+    background: #1B4E7C;
+    color: #CEE2D4;
+    border: none;
+    padding: 16px 32px;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    max-width: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.share-button:active {
+    transform: translateY(0);
+}
+
+/* Styles for when capturing the image */
+#split-results.capturing {
+    background: white;
+    padding: 24px;
+    border-radius: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    margin: 0;
+}
+
+#split-results.capturing .store-total {
+    padding: 16px 0;
+}
+
+#split-results.capturing .members-list-container {
+    padding: 0;
+}
+
+#split-results.capturing .member-total {
+    padding: 12px 48px;
+}
+
+#split-results.capturing .member-total:not(:last-child)::after {
+    bottom: -6px;
 } 
