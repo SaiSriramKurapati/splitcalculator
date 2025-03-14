@@ -988,11 +988,47 @@ const BillUploaderMobile = () => {
                                 )}
                             </div>
                             <div className="member-details">
-                                {getAssignedItems(selectedMember).map((item, itemIndex) => (
-                                    <div key={itemIndex} className="assigned-item">
-                                        <span>{item.name}</span>
+                                {/* Items section */}
+                                <div className="items-section">
+                                    {getAssignedItems(selectedMember).map((item, itemIndex) => {
+                                        const originalIndex = billData.items.findIndex(i => i.name === item.name && i.price === item.price);
+                                        const numSharing = assignments[originalIndex]?.length || 1;
+                                        return (
+                                            <div key={itemIndex} className="assigned-item">
+                                                <span className="item-name">{item.name}</span>
+                                                <span className="item-price">${(item.price / numSharing).toFixed(2)}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Additional charges section */}
+                                <div className="additional-charges">
+                                    {summary.tax > 0 && (
+                                        <div className="assigned-item tax-item">
+                                            <span className="item-name">Tax Share</span>
+                                            <span className="item-price">${(totals[selectedMember] - getAssignedItems(selectedMember).reduce((sum, item) => {
+                                                const originalIndex = billData.items.findIndex(i => i.name === item.name && i.price === item.price);
+                                                const numSharing = assignments[originalIndex]?.length || 1;
+                                                return sum + (item.price / numSharing);
+                                            }, 0)).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {summary.tip > 0 && (
+                                        <div className="assigned-item tip-item">
+                                            <span className="item-name">Tip/Others Share</span>
+                                            <span className="item-price">${((summary.tip / members.length)).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Total section */}
+                                <div className="member-total-section">
+                                    <div className="assigned-item total-item">
+                                        <span className="item-name">Total Share</span>
+                                        <span className="item-price total-price">${totals[selectedMember]?.toFixed(2)}</span>
                                     </div>
-                                ))}
+                                </div>
                             </div>
                         </div>
 
