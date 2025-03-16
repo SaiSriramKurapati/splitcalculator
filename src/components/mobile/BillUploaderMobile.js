@@ -16,6 +16,7 @@ const BillUploaderMobile = () => {
     const [retryAttempts, setRetryAttempts] = useState(0);
     const [showErrorUI, setShowErrorUI] = useState(false);
     const [showMemberAlert, setShowMemberAlert] = useState(false);
+    const [showImageOverlay, setShowImageOverlay] = useState(false); // Add new state for image overlay
     // Same state variables as desktop version
     const [file, setFile] = useState(null);
     const [billData, setBillData] = useState(null);
@@ -54,6 +55,15 @@ const BillUploaderMobile = () => {
         }
     }, [members, selectedMember]);
 
+    // Add cleanup for file preview URL
+    useEffect(() => {
+        return () => {
+            if (file) {
+                URL.revokeObjectURL(URL.createObjectURL(file));
+            }
+        };
+    }, [file]);
+
     // Reuse the same handlers from the desktop version
     const handleFileChange = (e) => {
         setFile(e.target.files[0]);
@@ -90,7 +100,7 @@ const BillUploaderMobile = () => {
 
         try {
             const response = await axios.post(
-                '/api/bills/upload',
+                'https://splitcalculator-backend.onrender.com/api/bills/upload',
                 formData,
                 {
                     headers: {
@@ -432,97 +442,135 @@ const BillUploaderMobile = () => {
             membersSection.style.marginTop = '24px';
             
             members.forEach((member, index) => {
-                const memberRow = document.createElement('div');
-                memberRow.style.display = 'flex';
-                memberRow.style.justifyContent = 'space-between';
-                memberRow.style.alignItems = 'center';
-                memberRow.style.padding = '12px 48px';
-                memberRow.style.position = 'relative';
-                
-                const memberName = document.createElement('span');
+                const memberSection = document.createElement('div');
+                memberSection.style.marginBottom = '32px';
+                memberSection.style.padding = '16px';
+                memberSection.style.background = 'rgba(27, 78, 124, 0.05)';
+                memberSection.style.borderRadius = '12px';
+
+                // Member name header
+                const memberName = document.createElement('div');
                 memberName.textContent = member;
-                memberName.style.color = '#051B2E';
+                memberName.style.color = '#1B4E7C';
                 memberName.style.fontSize = '20px';
                 memberName.style.fontWeight = '600';
+                memberName.style.marginBottom = '16px';
                 memberName.style.textAlign = 'center';
-                memberName.style.flex = '1';
-                
-                const memberAmount = document.createElement('span');
-                memberAmount.textContent = `$ ${totals[member]?.toFixed(2) || '0.00'}`;
-                memberAmount.style.color = '#0B3358';
-                memberAmount.style.fontSize = '20px';
-                memberAmount.style.fontWeight = '600';
-                memberAmount.style.textAlign = 'right';
-                memberAmount.style.flex = '1';
-                
-                memberRow.appendChild(memberName);
-                memberRow.appendChild(memberAmount);
-                
-                if (index < members.length - 1) {
-                    const divider = document.createElement('div');
-                    divider.style.position = 'absolute';
-                    divider.style.bottom = '-8px';
-                    divider.style.left = '24px';
-                    divider.style.right = '24px';
-                    divider.style.height = '1px';
-                    divider.style.backgroundImage = 'linear-gradient(to right, rgba(161, 183, 203, 0.70) 8px, transparent 8px)';
-                    divider.style.backgroundSize = '16px 1px';
-                    divider.style.backgroundRepeat = 'repeat-x';
-                    memberRow.appendChild(divider);
+                memberSection.appendChild(memberName);
+
+                // Items list
+                const assignedItems = getAssignedItems(member);
+                if (assignedItems.length > 0) {
+                    assignedItems.forEach(item => {
+                        const originalIndex = billData.items.findIndex(i => i.name === item.name && i.price === item.price);
+                        const numSharing = assignments[originalIndex]?.length || 1;
+                        const itemDiv = document.createElement('div');
+                        itemDiv.style.display = 'flex';
+                        itemDiv.style.justifyContent = 'space-between';
+                        itemDiv.style.padding = '8px 12px';
+                        itemDiv.style.marginBottom = '8px';
+                        itemDiv.style.background = 'rgba(255, 255, 255, 0.5)';
+                        itemDiv.style.borderRadius = '6px';
+
+                        const itemName = document.createElement('span');
+                        itemName.textContent = item.name;
+                        itemName.style.color = '#1B4E7C';
+                        itemName.style.flex = '1';
+
+                        const itemPrice = document.createElement('span');
+                        itemPrice.textContent = `$ ${(item.price / numSharing).toFixed(2)}`;
+                        itemPrice.style.color = '#1B4E7C';
+                        itemPrice.style.fontWeight = '500';
+
+                        itemDiv.appendChild(itemName);
+                        itemDiv.appendChild(itemPrice);
+                        memberSection.appendChild(itemDiv);
+                    });
                 }
-                
-                membersSection.appendChild(memberRow);
+
+                // Add tax share if applicable
+                if (summary.tax > 0) {
+                    const taxShare = document.createElement('div');
+                    taxShare.style.display = 'flex';
+                    taxShare.style.justifyContent = 'space-between';
+                    taxShare.style.padding = '8px 12px';
+                    taxShare.style.marginBottom = '8px';
+                    taxShare.style.background = 'rgba(27, 78, 124, 0.03)';
+                    taxShare.style.borderRadius = '6px';
+                    taxShare.style.marginTop = '12px';
+
+                    const taxLabel = document.createElement('span');
+                    taxLabel.textContent = 'Tax Share';
+                    taxLabel.style.color = '#1B4E7C';
+
+                    const taxAmount = document.createElement('span');
+                    const taxValue = totals[member] - getAssignedItems(member).reduce((sum, item) => {
+                        const originalIndex = billData.items.findIndex(i => i.name === item.name && i.price === item.price);
+                        const numSharing = assignments[originalIndex]?.length || 1;
+                        return sum + (item.price / numSharing);
+                    }, 0);
+                    taxAmount.textContent = `$ ${taxValue.toFixed(2)}`;
+                    taxAmount.style.color = '#1B4E7C';
+                    taxAmount.style.fontWeight = '500';
+
+                    taxShare.appendChild(taxLabel);
+                    taxShare.appendChild(taxAmount);
+                    memberSection.appendChild(taxShare);
+                }
+
+                // Add tip share if applicable
+                if (summary.tip > 0) {
+                    const tipShare = document.createElement('div');
+                    tipShare.style.display = 'flex';
+                    tipShare.style.justifyContent = 'space-between';
+                    tipShare.style.padding = '8px 12px';
+                    tipShare.style.marginBottom = '8px';
+                    tipShare.style.background = 'rgba(27, 78, 124, 0.03)';
+                    tipShare.style.borderRadius = '6px';
+
+                    const tipLabel = document.createElement('span');
+                    tipLabel.textContent = 'Tip/Others Share';
+                    tipLabel.style.color = '#1B4E7C';
+
+                    const tipAmount = document.createElement('span');
+                    tipAmount.textContent = `$ ${(summary.tip / members.length).toFixed(2)}`;
+                    tipAmount.style.color = '#1B4E7C';
+                    tipAmount.style.fontWeight = '500';
+
+                    tipShare.appendChild(tipLabel);
+                    tipShare.appendChild(tipAmount);
+                    memberSection.appendChild(tipShare);
+                }
+
+                // Add total
+                const totalDiv = document.createElement('div');
+                totalDiv.style.display = 'flex';
+                totalDiv.style.justifyContent = 'space-between';
+                totalDiv.style.padding = '12px';
+                totalDiv.style.marginTop = '12px';
+                totalDiv.style.background = 'rgba(27, 78, 124, 0.08)';
+                totalDiv.style.borderRadius = '6px';
+                totalDiv.style.borderTop = '1px solid rgba(27, 78, 124, 0.2)';
+
+                const totalLabel = document.createElement('span');
+                totalLabel.textContent = 'Total Share';
+                totalLabel.style.color = '#1B4E7C';
+                totalLabel.style.fontWeight = '600';
+
+                const totalValue = document.createElement('span');
+                totalValue.textContent = `$ ${totals[member]?.toFixed(2)}`;
+                totalValue.style.color = '#1B4E7C';
+                totalValue.style.fontWeight = '700';
+                totalValue.style.fontSize = '1.1rem';
+
+                totalDiv.appendChild(totalLabel);
+                totalDiv.appendChild(totalValue);
+                memberSection.appendChild(totalDiv);
+
+                membersSection.appendChild(memberSection);
             });
             
             tempContainer.appendChild(membersSection);
-            
-            // Add assigned items section
-            const assignedItemsSection = document.createElement('div');
-            assignedItemsSection.style.marginTop = '32px';
-            assignedItemsSection.style.paddingTop = '24px';
-            assignedItemsSection.style.borderTop = '1px solid rgba(27, 78, 124, 0.1)';
-            
-            const assignedItemsTitle = document.createElement('h3');
-            assignedItemsTitle.textContent = 'Assigned Items';
-            assignedItemsTitle.style.color = '#1B4E7C';
-            assignedItemsTitle.style.fontSize = '20px';
-            assignedItemsTitle.style.textAlign = 'center';
-            assignedItemsTitle.style.marginBottom = '20px';
-            assignedItemsSection.appendChild(assignedItemsTitle);
-            
-            members.forEach(member => {
-                const memberSection = document.createElement('div');
-                memberSection.style.marginBottom = '20px';
-                
-                const memberName = document.createElement('h4');
-                memberName.textContent = member;
-                memberName.style.color = '#051B2E';
-                memberName.style.fontSize = '20px';
-                memberName.style.marginBottom = '12px';
-                memberName.style.textAlign = 'center';
-                memberSection.appendChild(memberName);
-                
-                const itemsList = document.createElement('div');
-                itemsList.style.display = 'flex';
-                itemsList.style.flexDirection = 'column';
-                itemsList.style.gap = '8px';
-                
-                const assignedItems = getAssignedItems(member);
-                assignedItems.forEach(item => {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.textContent = item.name;
-                    itemDiv.style.color = '#0B3358';
-                    itemDiv.style.fontSize = '14px';
-                    itemDiv.style.padding = '8px 0';
-                    itemDiv.style.borderBottom = '1px solid rgba(27, 78, 124, 0.1)';
-                    itemsList.appendChild(itemDiv);
-                });
-                
-                memberSection.appendChild(itemsList);
-                assignedItemsSection.appendChild(memberSection);
-            });
-            
-            tempContainer.appendChild(assignedItemsSection);
             
             // Add the container to the document temporarily
             document.body.appendChild(tempContainer);
@@ -556,6 +604,9 @@ const BillUploaderMobile = () => {
 
     // Add handler for removing file
     const handleRemoveFile = () => {
+        if (file) {
+            URL.revokeObjectURL(URL.createObjectURL(file));
+        }
         setFile(null);
         setError(null);
     };
@@ -716,18 +767,96 @@ const BillUploaderMobile = () => {
                                     </div>
                                 </>
                             ) : (
-                                <button 
-                                    onClick={handleScan} 
-                                    disabled={loading} 
-                                    className="scan-button mt-3"
-                                >
-                                    <span className="scan-icon"></span>
-                                    {loading ? "Scanning..." : "Scan"}
-                                </button>
+                                <>
+                                    <button 
+                                        onClick={handleScan} 
+                                        disabled={loading} 
+                                        className="scan-button mt-3"
+                                    >
+                                        <span className="scan-icon"></span>
+                                        {loading ? "Scanning..." : "Scan"}
+                                    </button>
+                                    <div className="image-preview">
+                                        <img 
+                                            src={URL.createObjectURL(file)} 
+                                            alt="Bill preview" 
+                                            onClick={() => setShowImageOverlay(true)}
+                                            style={{
+                                                width: '100%',
+                                                maxHeight: '300px',
+                                                objectFit: 'contain',
+                                                borderRadius: '8px',
+                                                marginTop: '12px',
+                                                cursor: 'pointer'
+                                            }}
+                                        />
+                                    </div>
+                                </>
                             )}
                         </div>
                         
                         {error && <div className="error-message">{error}</div>}
+                        
+                        {/* Add Image Overlay */}
+                        {showImageOverlay && (
+                            <div 
+                                className="image-overlay"
+                                onClick={() => setShowImageOverlay(false)}
+                                style={{
+                                    position: 'fixed',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    zIndex: 1000,
+                                    padding: '20px'
+                                }}
+                            >
+                                <div 
+                                    className="overlay-content"
+                                    onClick={e => e.stopPropagation()}
+                                    style={{
+                                        position: 'relative',
+                                        maxWidth: '100%',
+                                        maxHeight: '100%',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <button
+                                        onClick={() => setShowImageOverlay(false)}
+                                        style={{
+                                            position: 'absolute',
+                                            top: '-40px',
+                                            right: 0,
+                                            background: 'none',
+                                            border: 'none',
+                                            color: 'white',
+                                            fontSize: '24px',
+                                            cursor: 'pointer',
+                                            padding: '8px',
+                                            zIndex: 1001
+                                        }}
+                                    >
+                                        ×
+                                    </button>
+                                    <img
+                                        src={URL.createObjectURL(file)}
+                                        alt="Bill full view"
+                                        style={{
+                                            maxWidth: '100%',
+                                            maxHeight: '90vh',
+                                            objectFit: 'contain'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
                 );
             case 2: // Bill Items and Summary
@@ -988,11 +1117,47 @@ const BillUploaderMobile = () => {
                                 )}
                             </div>
                             <div className="member-details">
-                                {getAssignedItems(selectedMember).map((item, itemIndex) => (
-                                    <div key={itemIndex} className="assigned-item">
-                                        <span>{item.name}</span>
+                                {/* Items section */}
+                                <div className="items-section">
+                                    {getAssignedItems(selectedMember).map((item, itemIndex) => {
+                                        const originalIndex = billData.items.findIndex(i => i.name === item.name && i.price === item.price);
+                                        const numSharing = assignments[originalIndex]?.length || 1;
+                                        return (
+                                            <div key={itemIndex} className="assigned-item">
+                                                <span className="item-name">{item.name}</span>
+                                                <span className="item-price">${(item.price / numSharing).toFixed(2)}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Additional charges section */}
+                                <div className="additional-charges">
+                                    {summary.tax > 0 && (
+                                        <div className="assigned-item tax-item">
+                                            <span className="item-name">Tax Share</span>
+                                            <span className="item-price">${(totals[selectedMember] - getAssignedItems(selectedMember).reduce((sum, item) => {
+                                                const originalIndex = billData.items.findIndex(i => i.name === item.name && i.price === item.price);
+                                                const numSharing = assignments[originalIndex]?.length || 1;
+                                                return sum + (item.price / numSharing);
+                                            }, 0)).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    {summary.tip > 0 && (
+                                        <div className="assigned-item tip-item">
+                                            <span className="item-name">Tip/Others Share</span>
+                                            <span className="item-price">${((summary.tip / members.length)).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Total section */}
+                                <div className="member-total-section">
+                                    <div className="assigned-item total-item">
+                                        <span className="item-name">Total Share</span>
+                                        <span className="item-price total-price">${totals[selectedMember]?.toFixed(2)}</span>
                                     </div>
-                                ))}
+                                </div>
                             </div>
                         </div>
 

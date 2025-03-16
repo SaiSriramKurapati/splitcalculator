@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link id="favicon" rel="icon" type="image/png" href="%PUBLIC_URL%/favicon_light_mode.png">
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
 
@@ -34,6 +34,21 @@
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 
     <title>Vaaata - Divide with ease, Pay with peace</title>
+
+    <script>
+      function updateFavicon() {
+        const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.getElementById("favicon").setAttribute("href", 
+          isDarkMode ? "%PUBLIC_URL%/favicon_dark_mode.png" : "%PUBLIC_URL%/favicon_light_mode.png"
+        );
+      }
+
+      // Initialize on page load
+      updateFavicon();
+
+      // Listen for changes in theme
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateFavicon);
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
