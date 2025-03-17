@@ -17,6 +17,9 @@ const BillUploaderMobile = () => {
     const [showErrorUI, setShowErrorUI] = useState(false);
     const [showMemberAlert, setShowMemberAlert] = useState(false);
     const [showImageOverlay, setShowImageOverlay] = useState(false); // Add new state for image overlay
+    const [showDiscrepancyAlert, setShowDiscrepancyAlert] = useState(false); // Add new state for discrepancy alert
+    const [apiResponseSummary, setApiResponseSummary] = useState(null); // Store original API response values
+    const [discrepancyAlertShown, setDiscrepancyAlertShown] = useState(false); // Add new state to track if alert has been shown
     // Same state variables as desktop version
     const [file, setFile] = useState(null);
     const [billData, setBillData] = useState(null);
@@ -48,6 +51,21 @@ const BillUploaderMobile = () => {
     const [feedbackError, setFeedbackError] = useState('');
     const [showThankYou, setShowThankYou] = useState(false);
 
+    // Add new functions to handle input focus and blur for numeric fields
+    const handleInputFocus = (e) => {
+        // If the current value is 0 or 0.00, clear the input
+        if (parseFloat(e.target.value) === 0) {
+            e.target.value = '';
+        }
+    };
+
+    const handleInputBlur = (e) => {
+        // If the input is empty, set it back to 0
+        if (e.target.value === '') {
+            e.target.value = '0';
+        }
+    };
+
     // Add useEffect to set default selected member
     useEffect(() => {
         if (members.length > 0 && !selectedMember) {
@@ -63,6 +81,35 @@ const BillUploaderMobile = () => {
             }
         };
     }, [file]);
+
+    // Add useEffect to recalculate summary when bill data changes
+    useEffect(() => {
+        if (billData && billData.items) {
+            // Calculate subtotal as sum of all items
+            const calculatedSubtotal = billData.items.reduce((sum, item) => sum + parseFloat(item.price || 0), 0);
+            
+            // Calculate total
+            setSummary(prev => ({
+                ...prev,
+                subtotal: parseFloat(calculatedSubtotal.toFixed(2)),
+                total: parseFloat((calculatedSubtotal + prev.tax + (prev.tip || 0)).toFixed(2))
+            }));
+        }
+    }, [billData?.items]);
+
+    // Add useEffect to handle discrepancy alert when entering Review Details screen
+    useEffect(() => {
+        // Only check when entering step 2 (Review Details) and alert hasn't been shown yet
+        if (activeStep === 2 && !discrepancyAlertShown && apiResponseSummary) {
+            const calculatedTotal = parseFloat(summary.total.toFixed(2));
+            const apiTotal = parseFloat((apiResponseSummary.total || 0).toFixed(2));
+            
+            if (Math.abs(calculatedTotal - apiTotal) > 0.01) {
+                setShowDiscrepancyAlert(true);
+                setDiscrepancyAlertShown(true); // Mark as shown
+            }
+        }
+    }, [activeStep, discrepancyAlertShown, apiResponseSummary, summary.total]);
 
     // Reuse the same handlers from the desktop version
     const handleFileChange = (e) => {
@@ -111,11 +158,39 @@ const BillUploaderMobile = () => {
 
             setBillData(response.data);
             setStoreTitle(response.data.title || "");
-            setSummary({
-                subtotal: response.data.subtotal || 0,
-                tax: response.data.tax || 0,
-                total: response.data.total || 0,
+            
+            // Store original API response values for comparison
+            setApiResponseSummary({
+                subtotal: parseFloat((response.data.subtotal || 0).toFixed(2)),
+                tax: parseFloat((response.data.tax || 0).toFixed(2)),
+                total: parseFloat((response.data.total || 0).toFixed(2)),
             });
+            
+            // Calculate subtotal as sum of items
+            const calculatedSubtotal = response.data.items ? 
+                parseFloat(response.data.items.reduce((sum, item) => sum + parseFloat(item.price || 0), 0).toFixed(2)) : 0;
+            
+            // Use tax from API response, but calculate our own total
+            const taxAmount = parseFloat((response.data.tax || 0).toFixed(2));
+            const calculatedTotal = parseFloat((calculatedSubtotal + taxAmount).toFixed(2));
+            
+            // Set the summary with our calculated values
+            setSummary({
+                subtotal: calculatedSubtotal,
+                tax: taxAmount,
+                total: calculatedTotal,
+            });
+            
+            // Check for discrepancies between our calculation and API values
+            const apiTotal = parseFloat((response.data.total || 0).toFixed(2));
+            if (Math.abs(calculatedTotal - apiTotal) > 0.01) {
+                // Only show alert if it hasn't been shown yet
+                if (!discrepancyAlertShown) {
+                    setShowDiscrepancyAlert(true);
+                    setDiscrepancyAlertShown(true); // Mark as shown
+                }
+            }
+            
             setAssignments({});
             setError(null);
             setRetryAttempts(0); // Reset retry attempts on success
@@ -149,11 +224,18 @@ const BillUploaderMobile = () => {
         setBillData({
             items: []
         });
+        // Set API response summary as null since there's no API response
+        setApiResponseSummary(null);
+        // Set summary with our calculated values
         setSummary({
-            subtotal: 0,
+            subtotal: 0, // calculated as sum of items (currently 0)
             tax: 0,
-            total: 0
+            tip: 0,
+            total: 0 // calculated as subtotal + tax + tip (all 0)
         });
+        // Reset discrepancy alert
+        setShowDiscrepancyAlert(false);
+        setDiscrepancyAlertShown(false); // Reset the shown flag when skipping upload
         setActiveStep(2);
     };
 
@@ -236,20 +318,29 @@ const BillUploaderMobile = () => {
         
         updatedBillData.items.push({
             name: newItem.name,
-            price: parseFloat(newItem.price)
+            price: parseFloat(parseFloat(newItem.price).toFixed(2))
         });
         
-        const newSubtotal = updatedBillData.items.reduce((sum, item) => sum + parseFloat(item.price), 0);
+        // Calculate subtotal as sum of all items
+        const newSubtotal = parseFloat(updatedBillData.items.reduce((sum, item) => sum + parseFloat(item.price), 0).toFixed(2));
+        
+        // Calculate total = subtotal + tax + tip
         const newSummary = {
             ...summary,
             subtotal: newSubtotal,
-            total: newSubtotal + parseFloat(summary.tax) + (summary.tip || 0)
+            total: parseFloat((newSubtotal + parseFloat(summary.tax) + (summary.tip || 0)).toFixed(2))
         };
         
         setBillData(updatedBillData);
         setSummary(newSummary);
         setNewItem({ name: "", price: "" });
         setShowAddItemForm(false); // Hide the form after adding
+        
+        // Check for discrepancies with API response if available
+        if (apiResponseSummary && Math.abs(newSummary.total - apiResponseSummary.total) > 0.01) {
+            // We don't show the alert again, it's already been shown once
+            // The alert state is tracked by discrepancyAlertShown
+        }
     };
     
     // New handler for removing an item
@@ -270,18 +361,27 @@ const BillUploaderMobile = () => {
         // Delete the last assignment entry
         delete updatedAssignments[updatedBillData.items.length];
         
-        // Update subtotal
-        const newSubtotal = updatedBillData.items.reduce((sum, item) => sum + parseFloat(item.price), 0);
+        // Calculate subtotal as sum of all items
+        const newSubtotal = parseFloat(updatedBillData.items.reduce((sum, item) => sum + parseFloat(item.price), 0).toFixed(2));
+        
+        // Calculate total = subtotal + tax
         const newSummary = {
             ...summary,
             subtotal: newSubtotal,
-            total: newSubtotal + parseFloat(summary.tax)
+            total: parseFloat((newSubtotal + parseFloat(summary.tax) + (summary.tip || 0)).toFixed(2))
         };
         
         // Update state
         setBillData(updatedBillData);
         setAssignments(updatedAssignments);
         setSummary(newSummary);
+        
+        // Check for discrepancies with API response if available
+        if (apiResponseSummary && Math.abs(newSummary.total - apiResponseSummary.total) > 0.01) {
+            // Don't show alert again
+        } else {
+            // Don't modify alert state here
+        }
     };
     
     const calculateSplit = () => {
@@ -306,23 +406,23 @@ const BillUploaderMobile = () => {
             }
     
             const assignedMembers = updatedAssignments[index];
-            const splitPrice = item.price / assignedMembers.length;
-            subTotal += item.price;
+            const splitPrice = parseFloat((item.price / assignedMembers.length).toFixed(2));
+            subTotal = parseFloat((subTotal + item.price).toFixed(2));
     
             assignedMembers.forEach((member) => {
-                totals[member] = (totals[member] || 0) + splitPrice;
+                totals[member] = parseFloat(((totals[member] || 0) + splitPrice).toFixed(2));
             });
         });
     
-        const taxAmount = summary.tax;
+        const taxAmount = parseFloat(summary.tax.toFixed(2));
         let grandTotal = 0;
     
         // Add tax share for each member
         members.forEach((member) => {
-            const memberShare = (totals[member] || 0) / subTotal;
-            const taxSplit = memberShare * taxAmount;
-            totals[member] = (totals[member] || 0) + taxSplit;
-            grandTotal += totals[member];
+            const memberShare = parseFloat(((totals[member] || 0) / subTotal).toFixed(4)); // Use 4 decimal places for ratio calculation
+            const taxSplit = parseFloat((memberShare * taxAmount).toFixed(2));
+            totals[member] = parseFloat(((totals[member] || 0) + taxSplit).toFixed(2));
+            grandTotal = parseFloat((grandTotal + totals[member]).toFixed(2));
         });
     
         setTotals(totals);
@@ -332,31 +432,63 @@ const BillUploaderMobile = () => {
     const handlePriceChange = (index, newPrice) => {
         if (billData && billData.items) {
             const updatedItems = [...billData.items];
-            updatedItems[index] = { ...updatedItems[index], price: parseFloat(newPrice) || 0 };
+            updatedItems[index] = { 
+                ...updatedItems[index], 
+                price: parseFloat(parseFloat(newPrice || 0).toFixed(2)) 
+            };
             
-            // Update subtotal
-            const newSubtotal = updatedItems.reduce((sum, item) => sum + parseFloat(item.price), 0);
+            // Calculate subtotal as sum of all items
+            const newSubtotal = parseFloat(updatedItems.reduce((sum, item) => sum + parseFloat(item.price), 0).toFixed(2));
+            
+            // Calculate total = subtotal + tax
             const newSummary = {
                 ...summary,
                 subtotal: newSubtotal,
-                total: newSubtotal + parseFloat(summary.tax)
+                total: parseFloat((newSubtotal + parseFloat(summary.tax) + (summary.tip || 0)).toFixed(2))
             };
             
             setBillData({ ...billData, items: updatedItems });
             setSummary(newSummary);
+            
+            // Check for discrepancies with API response if available
+            if (apiResponseSummary && Math.abs(newSummary.total - apiResponseSummary.total) > 0.01) {
+                // Don't show alert again
+            } else {
+                // Don't modify alert state here
+            }
         }
     };
 
     const handleSummaryChange = (field, value) => {
-        const newValue = parseFloat(value) || 0;
+        const newValue = parseFloat(parseFloat(value || 0).toFixed(2));
         const updatedSummary = { ...summary, [field]: newValue };
         
-        // Update total when subtotal, tax, or tip changes
-        if (field === 'tax' || field === 'subtotal' || field === 'tip') {
-            updatedSummary.total = updatedSummary.subtotal + updatedSummary.tax + (updatedSummary.tip || 0);
-        }
+        // For any change, recalculate total based on subtotal + tax + tip
+        const calculatedSubtotal = billData?.items ? 
+            parseFloat(billData.items.reduce((sum, item) => sum + parseFloat(item.price || 0), 0).toFixed(2)) : 0;
+            
+        // Use the new value if it's subtotal, otherwise use existing
+        const subtotalToUse = field === 'subtotal' ? newValue : calculatedSubtotal;
+        
+        // Use the new value if it's tax, otherwise use existing
+        const taxToUse = field === 'tax' ? newValue : parseFloat(summary.tax.toFixed(2));
+        
+        // Use the new value if it's tip, otherwise use existing
+        const tipToUse = field === 'tip' ? newValue : parseFloat((summary.tip || 0).toFixed(2));
+        
+        updatedSummary.subtotal = subtotalToUse;
+        updatedSummary.total = parseFloat((subtotalToUse + taxToUse + tipToUse).toFixed(2));
         
         setSummary(updatedSummary);
+        
+        // If tax or tip changed, check for discrepancies
+        if (field === 'tax' || field === 'tip') {
+            if (apiResponseSummary && Math.abs(updatedSummary.total - apiResponseSummary.total) > 0.01) {
+                // Don't show alert again
+            } else {
+                // Don't modify alert state here
+            }
+        }
     };
 
     // Mobile-specific navigation functions
@@ -504,11 +636,11 @@ const BillUploaderMobile = () => {
                     taxLabel.style.color = '#1B4E7C';
 
                     const taxAmount = document.createElement('span');
-                    const taxValue = totals[member] - getAssignedItems(member).reduce((sum, item) => {
+                    const taxValue = parseFloat((totals[member] - getAssignedItems(member).reduce((sum, item) => {
                         const originalIndex = billData.items.findIndex(i => i.name === item.name && i.price === item.price);
                         const numSharing = assignments[originalIndex]?.length || 1;
-                        return sum + (item.price / numSharing);
-                    }, 0);
+                        return parseFloat((sum + (item.price / numSharing)).toFixed(2));
+                    }, 0)).toFixed(2));
                     taxAmount.textContent = `$ ${taxValue.toFixed(2)}`;
                     taxAmount.style.color = '#1B4E7C';
                     taxAmount.style.fontWeight = '500';
@@ -897,6 +1029,8 @@ const BillUploaderMobile = () => {
                                                 type="number"
                                                 value={item.price}
                                                 onChange={(e) => handlePriceChange(index, e.target.value)}
+                                                onFocus={handleInputFocus}
+                                                onBlur={handleInputBlur}
                                                 className="price-input"
                                                 min="0"
                                                 step="0.01"
@@ -921,6 +1055,8 @@ const BillUploaderMobile = () => {
                                             type="number"
                                             value={newItem.price}
                                             onChange={(e) => setNewItem({...newItem, price: e.target.value})}
+                                            onFocus={handleInputFocus}
+                                            onBlur={handleInputBlur}
                                             placeholder="Price"
                                             className="price-input"
                                             min="0"
@@ -956,6 +1092,8 @@ const BillUploaderMobile = () => {
                                     type="number"
                                     value={summary.subtotal}
                                     onChange={(e) => handleSummaryChange("subtotal", e.target.value)}
+                                    onFocus={handleInputFocus}
+                                    onBlur={handleInputBlur}
                                     className="summary-input"
                                     min="0"
                                     step="0.01"
@@ -967,6 +1105,8 @@ const BillUploaderMobile = () => {
                                     type="number"
                                     value={summary.tax}
                                     onChange={(e) => handleSummaryChange("tax", e.target.value)}
+                                    onFocus={handleInputFocus}
+                                    onBlur={handleInputBlur}
                                     className="summary-input"
                                     min="0"
                                     step="0.01"
@@ -978,6 +1118,8 @@ const BillUploaderMobile = () => {
                                     type="number"
                                     value={summary.tip || 0}
                                     onChange={(e) => handleSummaryChange("tip", e.target.value)}
+                                    onFocus={handleInputFocus}
+                                    onBlur={handleInputBlur}
                                     className="summary-input"
                                     min="0"
                                     step="0.01"
@@ -1139,7 +1281,7 @@ const BillUploaderMobile = () => {
                                             <span className="item-price">${(totals[selectedMember] - getAssignedItems(selectedMember).reduce((sum, item) => {
                                                 const originalIndex = billData.items.findIndex(i => i.name === item.name && i.price === item.price);
                                                 const numSharing = assignments[originalIndex]?.length || 1;
-                                                return sum + (item.price / numSharing);
+                                                return parseFloat((sum + (item.price / numSharing)).toFixed(2));
                                             }, 0)).toFixed(2)}</span>
                                         </div>
                                     )}
@@ -1302,6 +1444,29 @@ const BillUploaderMobile = () => {
                                 Try Again
                             </button>
                         )}
+                    </div>
+                </div>
+            )}
+            {showDiscrepancyAlert && (
+                <div className="error-overlay" onClick={() => setShowDiscrepancyAlert(false)}>
+                    <div className="error-container" onClick={(e) => e.stopPropagation()}>
+                        <div className="error-icon">⚠️</div>
+                        <h3 className="error-title">Bill Total Discrepancy</h3>
+                        <p className="error-message">
+                            There appears to be a difference between the calculated total and the total in the scanned bill.
+                        </p>
+                        <p className="error-message">
+                            This may be due to missed items or price errors. Please review the items and update if needed.
+                        </p>
+                        <div className="discrepancy-details">
+                            <p>Calculated Total: ${summary.total.toFixed(2)}</p>
+                            {apiResponseSummary && (
+                                <p>Scanned Total: ${apiResponseSummary.total.toFixed(2)}</p>
+                            )}
+                        </div>
+                        <button onClick={() => setShowDiscrepancyAlert(false)} className="retry-button">
+                            OK, I'll Review
+                        </button>
                     </div>
                 </div>
             )}
