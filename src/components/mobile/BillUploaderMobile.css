@@ -1610,33 +1610,55 @@
     justify-content: space-between;
 }
 
+/* Update share options styles */
 .share-options {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     margin: 24px 0;
-    padding: 0 16px;
+    gap: 12px;
 }
 
 .share-button {
-    background: #1B4E7C;
-    color: #CEE2D4;
-    border: none;
-    padding: 16px 32px;
-    border-radius: 30px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    width: 100%;
-    max-width: 300px;
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 14px 16px;
+    background-color: #1B4E7C;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(27, 78, 124, 0.2);
 }
 
+.share-button:hover {
+    background-color: #0B3358;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(27, 78, 124, 0.3);
+}
 
 .share-button:active {
     transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(27, 78, 124, 0.2);
+}
+
+.download-button {
+    background-color: #1B4E7C;
+}
+
+.share-social-button {
+    background-color: #1B4E7C; /* Changed from WhatsApp green to design system blue */
+}
+
+/* Media query for small screens */
+@media (max-width: 360px) {
+    .share-options {
+        flex-direction: column;
+    }
 }
 
 /* Styles for when capturing the image */
