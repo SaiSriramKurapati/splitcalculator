@@ -1353,12 +1353,8 @@ const BillUploaderMobile = () => {
                                 <input
                                     type="number"
                                     value={summary.subtotal}
-                                    onChange={(e) => handleSummaryChange("subtotal", e.target.value)}
-                                    onFocus={handleInputFocus}
-                                    onBlur={handleInputBlur}
                                     className="summary-input"
-                                    min="0"
-                                    step="0.01"
+                                    readOnly
                                 />
                             </div>
                             <div className="summary-field">
