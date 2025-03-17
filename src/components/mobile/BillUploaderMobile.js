@@ -97,9 +97,10 @@ const BillUploaderMobile = () => {
         }
     }, [billData?.items]);
 
-    // Add useEffect to handle discrepancy alert when entering Review Details screen
+    // Fix useEffect to only check for discrepancy once after scanning
     useEffect(() => {
-        // Only check when entering step 2 (Review Details) and alert hasn't been shown yet
+        // Only check when entering step 2 (Review Details) directly after scanning 
+        // and only if alert hasn't been shown yet
         if (activeStep === 2 && !discrepancyAlertShown && apiResponseSummary) {
             const calculatedTotal = parseFloat(summary.total.toFixed(2));
             const apiTotal = parseFloat((apiResponseSummary.total || 0).toFixed(2));
@@ -109,7 +110,7 @@ const BillUploaderMobile = () => {
                 setDiscrepancyAlertShown(true); // Mark as shown
             }
         }
-    }, [activeStep, discrepancyAlertShown, apiResponseSummary, summary.total]);
+    }, [activeStep]); // Only trigger when step changes, not on every data change
 
     // Reuse the same handlers from the desktop version
     const handleFileChange = (e) => {
@@ -336,11 +337,7 @@ const BillUploaderMobile = () => {
         setNewItem({ name: "", price: "" });
         setShowAddItemForm(false); // Hide the form after adding
         
-        // Check for discrepancies with API response if available
-        if (apiResponseSummary && Math.abs(newSummary.total - apiResponseSummary.total) > 0.01) {
-            // We don't show the alert again, it's already been shown once
-            // The alert state is tracked by discrepancyAlertShown
-        }
+        // Remove discrepancy checking - we don't want to show the alert when user manually edits
     };
     
     // New handler for removing an item
@@ -376,12 +373,7 @@ const BillUploaderMobile = () => {
         setAssignments(updatedAssignments);
         setSummary(newSummary);
         
-        // Check for discrepancies with API response if available
-        if (apiResponseSummary && Math.abs(newSummary.total - apiResponseSummary.total) > 0.01) {
-            // Don't show alert again
-        } else {
-            // Don't modify alert state here
-        }
+        // Remove discrepancy checking - we don't want to show the alert when user manually edits
     };
     
     const calculateSplit = () => {
@@ -450,12 +442,7 @@ const BillUploaderMobile = () => {
             setBillData({ ...billData, items: updatedItems });
             setSummary(newSummary);
             
-            // Check for discrepancies with API response if available
-            if (apiResponseSummary && Math.abs(newSummary.total - apiResponseSummary.total) > 0.01) {
-                // Don't show alert again
-            } else {
-                // Don't modify alert state here
-            }
+            // Remove discrepancy checking - we don't want to show the alert when user manually edits
         }
     };
 
@@ -481,14 +468,7 @@ const BillUploaderMobile = () => {
         
         setSummary(updatedSummary);
         
-        // If tax or tip changed, check for discrepancies
-        if (field === 'tax' || field === 'tip') {
-            if (apiResponseSummary && Math.abs(updatedSummary.total - apiResponseSummary.total) > 0.01) {
-                // Don't show alert again
-            } else {
-                // Don't modify alert state here
-            }
-        }
+        // Remove discrepancy checking - we don't want to show the alert when user manually edits
     };
 
     // Mobile-specific navigation functions
@@ -636,12 +616,8 @@ const BillUploaderMobile = () => {
                     taxLabel.style.color = '#1B4E7C';
 
                     const taxAmount = document.createElement('span');
-                    const taxValue = parseFloat((totals[member] - getAssignedItems(member).reduce((sum, item) => {
-                        const originalIndex = billData.items.findIndex(i => i.name === item.name && i.price === item.price);
-                        const numSharing = assignments[originalIndex]?.length || 1;
-                        return parseFloat((sum + (item.price / numSharing)).toFixed(2));
-                    }, 0)).toFixed(2));
-                    taxAmount.textContent = `$ ${taxValue.toFixed(2)}`;
+                    const taxValue = calculateTaxShare(member);
+                    taxAmount.textContent = `$ ${taxValue}`;
                     taxAmount.style.color = '#1B4E7C';
                     taxAmount.style.fontWeight = '500';
 
@@ -814,6 +790,292 @@ const BillUploaderMobile = () => {
         } finally {
             setIsSendingFeedback(false);
         }
+    };
+
+    // Update the shareResults function to properly direct users to the website
+    const shareResults = async () => {
+        try {
+            // Show loading indicator or feedback
+            const shareButton = document.querySelector('.share-social-button');
+            const originalText = shareButton.textContent;
+            shareButton.textContent = "Generating...";
+            shareButton.disabled = true;
+            
+            // First generate the image - using the same detailed format as downloadResultsAsImage
+            const tempContainer = document.createElement('div');
+            tempContainer.style.background = 'white';
+            tempContainer.style.padding = '24px';
+            tempContainer.style.borderRadius = '20px';
+            tempContainer.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+            tempContainer.style.width = '100%';
+            tempContainer.style.maxWidth = '600px';
+            tempContainer.style.margin = '0 auto';
+            
+            // Add store total section
+            const storeTotalSection = document.createElement('div');
+            storeTotalSection.style.textAlign = 'center';
+            storeTotalSection.style.padding = '16px 0';
+            
+            const storeName = document.createElement('div');
+            storeName.textContent = storeTitle || "Unknown Store";
+            storeName.style.color = '#0B3358';
+            storeName.style.fontSize = '24px';
+            storeName.style.fontWeight = '600';
+            storeName.style.marginBottom = '8px';
+            
+            const totalAmount = document.createElement('div');
+            totalAmount.textContent = `$ ${summary.total.toFixed(2)}`;
+            totalAmount.style.color = '#0B3358';
+            totalAmount.style.fontSize = '48px';
+            totalAmount.style.fontWeight = '600';
+            
+            // Add website branding
+            const appBranding = document.createElement('div');
+            appBranding.textContent = "Split with VAAATA";
+            appBranding.style.color = '#1B4E7C';
+            appBranding.style.fontSize = '16px';
+            appBranding.style.fontWeight = '500';
+            appBranding.style.marginTop = '8px';
+            appBranding.style.opacity = '0.8';
+            
+            const websiteUrl = document.createElement('div');
+            websiteUrl.textContent = "www.vaaata.com";
+            websiteUrl.style.color = '#1B4E7C';
+            websiteUrl.style.fontSize = '14px';
+            websiteUrl.style.marginTop = '4px';
+            websiteUrl.style.opacity = '0.8';
+            
+            storeTotalSection.appendChild(storeName);
+            storeTotalSection.appendChild(totalAmount);
+            storeTotalSection.appendChild(appBranding);
+            storeTotalSection.appendChild(websiteUrl);
+            tempContainer.appendChild(storeTotalSection);
+            
+            // Add members breakdown section with detailed information
+            const membersSection = document.createElement('div');
+            membersSection.style.marginTop = '24px';
+            
+            members.forEach((member, index) => {
+                const memberSection = document.createElement('div');
+                memberSection.style.marginBottom = '32px';
+                memberSection.style.padding = '16px';
+                memberSection.style.background = 'rgba(27, 78, 124, 0.05)';
+                memberSection.style.borderRadius = '12px';
+
+                // Member name header
+                const memberName = document.createElement('div');
+                memberName.textContent = member;
+                memberName.style.color = '#1B4E7C';
+                memberName.style.fontSize = '20px';
+                memberName.style.fontWeight = '600';
+                memberName.style.marginBottom = '16px';
+                memberName.style.textAlign = 'center';
+                memberSection.appendChild(memberName);
+
+                // Items list
+                const assignedItems = getAssignedItems(member);
+                if (assignedItems.length > 0) {
+                    assignedItems.forEach(item => {
+                        const originalIndex = billData.items.findIndex(i => i.name === item.name && i.price === item.price);
+                        const numSharing = assignments[originalIndex]?.length || 1;
+                        const itemDiv = document.createElement('div');
+                        itemDiv.style.display = 'flex';
+                        itemDiv.style.justifyContent = 'space-between';
+                        itemDiv.style.padding = '8px 12px';
+                        itemDiv.style.marginBottom = '8px';
+                        itemDiv.style.background = 'rgba(255, 255, 255, 0.5)';
+                        itemDiv.style.borderRadius = '6px';
+
+                        const itemName = document.createElement('span');
+                        itemName.textContent = item.name;
+                        itemName.style.color = '#1B4E7C';
+                        itemName.style.flex = '1';
+
+                        const itemPrice = document.createElement('span');
+                        itemPrice.textContent = `$ ${(item.price / numSharing).toFixed(2)}`;
+                        itemPrice.style.color = '#1B4E7C';
+                        itemPrice.style.fontWeight = '500';
+
+                        itemDiv.appendChild(itemName);
+                        itemDiv.appendChild(itemPrice);
+                        memberSection.appendChild(itemDiv);
+                    });
+                }
+
+                // Add tax share if applicable
+                if (summary.tax > 0) {
+                    const taxShare = document.createElement('div');
+                    taxShare.style.display = 'flex';
+                    taxShare.style.justifyContent = 'space-between';
+                    taxShare.style.padding = '8px 12px';
+                    taxShare.style.marginBottom = '8px';
+                    taxShare.style.background = 'rgba(27, 78, 124, 0.03)';
+                    taxShare.style.borderRadius = '6px';
+                    taxShare.style.marginTop = '12px';
+
+                    const taxLabel = document.createElement('span');
+                    taxLabel.textContent = 'Tax Share';
+                    taxLabel.style.color = '#1B4E7C';
+
+                    const taxAmount = document.createElement('span');
+                    const taxValue = calculateTaxShare(member);
+                    taxAmount.textContent = `$ ${taxValue}`;
+                    taxAmount.style.color = '#1B4E7C';
+                    taxAmount.style.fontWeight = '500';
+
+                    taxShare.appendChild(taxLabel);
+                    taxShare.appendChild(taxAmount);
+                    memberSection.appendChild(taxShare);
+                }
+
+                // Add tip share if applicable
+                if (summary.tip > 0) {
+                    const tipShare = document.createElement('div');
+                    tipShare.style.display = 'flex';
+                    tipShare.style.justifyContent = 'space-between';
+                    tipShare.style.padding = '8px 12px';
+                    tipShare.style.marginBottom = '8px';
+                    tipShare.style.background = 'rgba(27, 78, 124, 0.03)';
+                    tipShare.style.borderRadius = '6px';
+
+                    const tipLabel = document.createElement('span');
+                    tipLabel.textContent = 'Tip/Others Share';
+                    tipLabel.style.color = '#1B4E7C';
+
+                    const tipAmount = document.createElement('span');
+                    tipAmount.textContent = `$ ${(summary.tip / members.length).toFixed(2)}`;
+                    tipAmount.style.color = '#1B4E7C';
+                    tipAmount.style.fontWeight = '500';
+
+                    tipShare.appendChild(tipLabel);
+                    tipShare.appendChild(tipAmount);
+                    memberSection.appendChild(tipShare);
+                }
+
+                // Add total
+                const totalDiv = document.createElement('div');
+                totalDiv.style.display = 'flex';
+                totalDiv.style.justifyContent = 'space-between';
+                totalDiv.style.padding = '12px';
+                totalDiv.style.marginTop = '12px';
+                totalDiv.style.background = 'rgba(27, 78, 124, 0.08)';
+                totalDiv.style.borderRadius = '6px';
+                totalDiv.style.borderTop = '1px solid rgba(27, 78, 124, 0.2)';
+
+                const totalLabel = document.createElement('span');
+                totalLabel.textContent = 'Total Share';
+                totalLabel.style.color = '#1B4E7C';
+                totalLabel.style.fontWeight = '600';
+
+                const totalValue = document.createElement('span');
+                totalValue.textContent = `$ ${totals[member]?.toFixed(2)}`;
+                totalValue.style.color = '#1B4E7C';
+                totalValue.style.fontWeight = '700';
+                totalValue.style.fontSize = '1.1rem';
+
+                totalDiv.appendChild(totalLabel);
+                totalDiv.appendChild(totalValue);
+                memberSection.appendChild(totalDiv);
+
+                membersSection.appendChild(memberSection);
+            });
+            
+            tempContainer.appendChild(membersSection);
+            
+            // Add the container to the document temporarily
+            document.body.appendChild(tempContainer);
+            
+            // Capture the image
+            const canvas = await html2canvas(tempContainer, {
+                backgroundColor: '#ffffff',
+                scale: 2,
+                logging: false,
+                useCORS: true,
+                width: tempContainer.offsetWidth,
+                height: tempContainer.offsetHeight
+            });
+            
+            // Remove the temporary container
+            document.body.removeChild(tempContainer);
+            
+            // Reset button state
+            shareButton.textContent = originalText;
+            shareButton.disabled = false;
+            
+            // Convert the canvas to a blob
+            const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.9));
+            
+            // Create a data URL for sharing as fallback
+            const imageUrl = canvas.toDataURL('image/png', 0.9);
+            
+            // Prepare sharing text
+            const shareTitle = `${storeTitle || 'Restaurant'} Bill Split`;
+            const shareText = `Check out how we split our bill at ${storeTitle || 'the restaurant'} using VAAATA! Visit www.vaaata.com to split your bills effortlessly.`;
+            
+            // Create a file for sharing
+            const imageFile = new File([imageBlob], 'vaaata-bill-split.png', { type: 'image/png' });
+            
+            // Check if Web Share API is supported with files
+            if (navigator.share) {
+                try {
+                    if (navigator.canShare && navigator.canShare({ files: [imageFile] })) {
+                        // Preferred: Share with both text and image
+                        await navigator.share({
+                            title: shareTitle,
+                            text: shareText,
+                            url: 'https://www.vaaata.com',
+                            files: [imageFile]
+                        });
+                        return; // Success
+                    } else {
+                        // Fallback to just text and URL if file sharing not supported
+                        await navigator.share({
+                            title: shareTitle,
+                            text: shareText,
+                            url: 'https://www.vaaata.com'
+                        });
+                        return; // Success
+                    }
+                } catch (error) {
+                    console.log('Sharing failed', error);
+                    // Continue to fallback
+                }
+            }
+            
+            // Fallback for browsers that don't support Web Share API
+            const link = document.createElement('a');
+            link.download = 'vaaata-bill-split.png';
+            link.href = imageUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert('Your split image has been downloaded! To share on social media, upload this image and add: "' + shareText + '"');
+            
+        } catch (error) {
+            console.error('Error sharing results:', error);
+            alert('Failed to share results. Please try again or use the Download button instead.');
+            
+            // Reset button if there was an error
+            const shareButton = document.querySelector('.share-social-button');
+            if (shareButton && shareButton.disabled) {
+                shareButton.textContent = "Share";
+                shareButton.disabled = false;
+            }
+        }
+    };
+
+    const calculateTaxShare = (member) => {
+        // Calculate the sum of item prices assigned to this member
+        const itemsTotal = getAssignedItems(member).reduce((sum, item) => {
+            const originalIndex = billData.items.findIndex(i => i.name === item.name && i.price === item.price);
+            const numSharing = assignments[originalIndex]?.length || 1;
+            return sum + (item.price / numSharing);
+        }, 0);
+        
+        // Calculate tax share (ensure it's never negative)
+        const taxShare = Math.max(0, totals[member] - itemsTotal);
+        return taxShare.toFixed(2);
     };
 
     // Render different steps based on activeStep
@@ -1091,12 +1353,8 @@ const BillUploaderMobile = () => {
                                 <input
                                     type="number"
                                     value={summary.subtotal}
-                                    onChange={(e) => handleSummaryChange("subtotal", e.target.value)}
-                                    onFocus={handleInputFocus}
-                                    onBlur={handleInputBlur}
                                     className="summary-input"
-                                    min="0"
-                                    step="0.01"
+                                    readOnly
                                 />
                             </div>
                             <div className="summary-field">
@@ -1273,22 +1531,17 @@ const BillUploaderMobile = () => {
                                     })}
                                 </div>
 
-                                {/* Additional charges section */}
+                                {/* Additional charges section - completely rewritten */}
                                 <div className="additional-charges">
-                                    {summary.tax > 0 && (
-                                        <div className="assigned-item tax-item">
-                                            <span className="item-name">Tax Share</span>
-                                            <span className="item-price">${(totals[selectedMember] - getAssignedItems(selectedMember).reduce((sum, item) => {
-                                                const originalIndex = billData.items.findIndex(i => i.name === item.name && i.price === item.price);
-                                                const numSharing = assignments[originalIndex]?.length || 1;
-                                                return parseFloat((sum + (item.price / numSharing)).toFixed(2));
-                                            }, 0)).toFixed(2)}</span>
-                                        </div>
-                                    )}
+                                    <div className="assigned-item tax-item">
+                                        <span className="item-name">Tax Share</span>
+                                        <span className="item-price">${calculateTaxShare(selectedMember)}</span>
+                                    </div>
+                                    
                                     {summary.tip > 0 && (
                                         <div className="assigned-item tip-item">
                                             <span className="item-name">Tip/Others Share</span>
-                                            <span className="item-price">${((summary.tip / members.length)).toFixed(2)}</span>
+                                            <span className="item-price">${(summary.tip / members.length).toFixed(2)}</span>
                                         </div>
                                     )}
                                 </div>
@@ -1305,8 +1558,11 @@ const BillUploaderMobile = () => {
 
                         {/* Share Options */}
                         <div className="share-options">
-                            <button onClick={downloadResultsAsImage} className="share-button">
-                                Download Results
+                            <button onClick={downloadResultsAsImage} className="share-button download-button">
+                                Download Image
+                            </button>
+                            <button onClick={shareResults} className="share-button share-social-button">
+                                Share Results
                             </button>
                         </div>
 
