@@ -801,7 +801,7 @@ const BillUploaderMobile = () => {
             shareButton.textContent = "Generating...";
             shareButton.disabled = true;
             
-            // First generate the image
+            // First generate the image - using the same detailed format as downloadResultsAsImage
             const tempContainer = document.createElement('div');
             tempContainer.style.background = 'white';
             tempContainer.style.padding = '24px';
@@ -851,36 +851,132 @@ const BillUploaderMobile = () => {
             storeTotalSection.appendChild(websiteUrl);
             tempContainer.appendChild(storeTotalSection);
             
-            // Add members breakdown section (simplified for sharing)
+            // Add members breakdown section with detailed information
             const membersSection = document.createElement('div');
             membersSection.style.marginTop = '24px';
             
             members.forEach((member, index) => {
                 const memberSection = document.createElement('div');
-                memberSection.style.marginBottom = '16px';
-                memberSection.style.padding = '12px';
+                memberSection.style.marginBottom = '32px';
+                memberSection.style.padding = '16px';
                 memberSection.style.background = 'rgba(27, 78, 124, 0.05)';
                 memberSection.style.borderRadius = '12px';
-                memberSection.style.display = 'flex';
-                memberSection.style.justifyContent = 'space-between';
-                memberSection.style.alignItems = 'center';
 
-                // Member name
+                // Member name header
                 const memberName = document.createElement('div');
                 memberName.textContent = member;
                 memberName.style.color = '#1B4E7C';
-                memberName.style.fontSize = '18px';
+                memberName.style.fontSize = '20px';
                 memberName.style.fontWeight = '600';
-
-                // Member total
-                const memberTotal = document.createElement('div');
-                memberTotal.textContent = `$ ${totals[member]?.toFixed(2)}`;
-                memberTotal.style.color = '#1B4E7C';
-                memberTotal.style.fontSize = '20px';
-                memberTotal.style.fontWeight = '700';
-
+                memberName.style.marginBottom = '16px';
+                memberName.style.textAlign = 'center';
                 memberSection.appendChild(memberName);
-                memberSection.appendChild(memberTotal);
+
+                // Items list
+                const assignedItems = getAssignedItems(member);
+                if (assignedItems.length > 0) {
+                    assignedItems.forEach(item => {
+                        const originalIndex = billData.items.findIndex(i => i.name === item.name && i.price === item.price);
+                        const numSharing = assignments[originalIndex]?.length || 1;
+                        const itemDiv = document.createElement('div');
+                        itemDiv.style.display = 'flex';
+                        itemDiv.style.justifyContent = 'space-between';
+                        itemDiv.style.padding = '8px 12px';
+                        itemDiv.style.marginBottom = '8px';
+                        itemDiv.style.background = 'rgba(255, 255, 255, 0.5)';
+                        itemDiv.style.borderRadius = '6px';
+
+                        const itemName = document.createElement('span');
+                        itemName.textContent = item.name;
+                        itemName.style.color = '#1B4E7C';
+                        itemName.style.flex = '1';
+
+                        const itemPrice = document.createElement('span');
+                        itemPrice.textContent = `$ ${(item.price / numSharing).toFixed(2)}`;
+                        itemPrice.style.color = '#1B4E7C';
+                        itemPrice.style.fontWeight = '500';
+
+                        itemDiv.appendChild(itemName);
+                        itemDiv.appendChild(itemPrice);
+                        memberSection.appendChild(itemDiv);
+                    });
+                }
+
+                // Add tax share if applicable
+                if (summary.tax > 0) {
+                    const taxShare = document.createElement('div');
+                    taxShare.style.display = 'flex';
+                    taxShare.style.justifyContent = 'space-between';
+                    taxShare.style.padding = '8px 12px';
+                    taxShare.style.marginBottom = '8px';
+                    taxShare.style.background = 'rgba(27, 78, 124, 0.03)';
+                    taxShare.style.borderRadius = '6px';
+                    taxShare.style.marginTop = '12px';
+
+                    const taxLabel = document.createElement('span');
+                    taxLabel.textContent = 'Tax Share';
+                    taxLabel.style.color = '#1B4E7C';
+
+                    const taxAmount = document.createElement('span');
+                    const taxValue = calculateTaxShare(member);
+                    taxAmount.textContent = `$ ${taxValue}`;
+                    taxAmount.style.color = '#1B4E7C';
+                    taxAmount.style.fontWeight = '500';
+
+                    taxShare.appendChild(taxLabel);
+                    taxShare.appendChild(taxAmount);
+                    memberSection.appendChild(taxShare);
+                }
+
+                // Add tip share if applicable
+                if (summary.tip > 0) {
+                    const tipShare = document.createElement('div');
+                    tipShare.style.display = 'flex';
+                    tipShare.style.justifyContent = 'space-between';
+                    tipShare.style.padding = '8px 12px';
+                    tipShare.style.marginBottom = '8px';
+                    tipShare.style.background = 'rgba(27, 78, 124, 0.03)';
+                    tipShare.style.borderRadius = '6px';
+
+                    const tipLabel = document.createElement('span');
+                    tipLabel.textContent = 'Tip/Others Share';
+                    tipLabel.style.color = '#1B4E7C';
+
+                    const tipAmount = document.createElement('span');
+                    tipAmount.textContent = `$ ${(summary.tip / members.length).toFixed(2)}`;
+                    tipAmount.style.color = '#1B4E7C';
+                    tipAmount.style.fontWeight = '500';
+
+                    tipShare.appendChild(tipLabel);
+                    tipShare.appendChild(tipAmount);
+                    memberSection.appendChild(tipShare);
+                }
+
+                // Add total
+                const totalDiv = document.createElement('div');
+                totalDiv.style.display = 'flex';
+                totalDiv.style.justifyContent = 'space-between';
+                totalDiv.style.padding = '12px';
+                totalDiv.style.marginTop = '12px';
+                totalDiv.style.background = 'rgba(27, 78, 124, 0.08)';
+                totalDiv.style.borderRadius = '6px';
+                totalDiv.style.borderTop = '1px solid rgba(27, 78, 124, 0.2)';
+
+                const totalLabel = document.createElement('span');
+                totalLabel.textContent = 'Total Share';
+                totalLabel.style.color = '#1B4E7C';
+                totalLabel.style.fontWeight = '600';
+
+                const totalValue = document.createElement('span');
+                totalValue.textContent = `$ ${totals[member]?.toFixed(2)}`;
+                totalValue.style.color = '#1B4E7C';
+                totalValue.style.fontWeight = '700';
+                totalValue.style.fontSize = '1.1rem';
+
+                totalDiv.appendChild(totalLabel);
+                totalDiv.appendChild(totalValue);
+                memberSection.appendChild(totalDiv);
+
                 membersSection.appendChild(memberSection);
             });
             
