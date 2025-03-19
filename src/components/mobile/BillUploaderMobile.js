@@ -20,6 +20,7 @@ const BillUploaderMobile = () => {
     const [showDiscrepancyAlert, setShowDiscrepancyAlert] = useState(false); // Add new state for discrepancy alert
     const [apiResponseSummary, setApiResponseSummary] = useState(null); // Store original API response values
     const [discrepancyAlertShown, setDiscrepancyAlertShown] = useState(false); // Add new state to track if alert has been shown
+    const [isManualEntry, setIsManualEntry] = useState(false); // New state to track if user is manually entering data
     // Same state variables as desktop version
     const [file, setFile] = useState(null);
     const [billData, setBillData] = useState(null);
@@ -157,44 +158,61 @@ const BillUploaderMobile = () => {
                 }
             );
 
-            setBillData(response.data);
-            setStoreTitle(response.data.title || "");
+            // Check if response data is empty or invalid
+            if (!response.data || !response.data.items || response.data.items.length === 0) {
+                throw new Error("No items were detected in the bill. Please try again or add items manually.");
+            }
+
+            // Validate and clean the response data
+            const cleanedItems = response.data.items.map(item => ({
+                name: item.name || "Unnamed Item",
+                price: parseFloat(item.price) || 0
+            })).filter(item => item.price > 0); // Remove items with zero or invalid prices
+
+            if (cleanedItems.length === 0) {
+                throw new Error("No valid items were detected in the bill. Please try again or add items manually.");
+            }
+
+            // Set the cleaned bill data
+            setBillData({
+                ...response.data,
+                items: cleanedItems
+            });
+            
+            // Set store title with fallback
+            setStoreTitle(response.data.title || "Unknown Store");
+            
+            // Calculate and validate totals
+            const calculatedSubtotal = cleanedItems.reduce((sum, item) => sum + item.price, 0);
+            const taxAmount = parseFloat(response.data.tax) || 0;
+            const tipAmount = parseFloat(response.data.tip) || 0;
             
             // Store original API response values for comparison
             setApiResponseSummary({
-                subtotal: parseFloat((response.data.subtotal || 0).toFixed(2)),
-                tax: parseFloat((response.data.tax || 0).toFixed(2)),
-                total: parseFloat((response.data.total || 0).toFixed(2)),
+                subtotal: calculatedSubtotal,
+                tax: taxAmount,
+                total: parseFloat(response.data.total) || calculatedSubtotal + taxAmount + tipAmount,
             });
             
-            // Calculate subtotal as sum of items
-            const calculatedSubtotal = response.data.items ? 
-                parseFloat(response.data.items.reduce((sum, item) => sum + parseFloat(item.price || 0), 0).toFixed(2)) : 0;
-            
-            // Use tax from API response, but calculate our own total
-            const taxAmount = parseFloat((response.data.tax || 0).toFixed(2));
-            const calculatedTotal = parseFloat((calculatedSubtotal + taxAmount).toFixed(2));
-            
-            // Set the summary with our calculated values
+            // Set the summary with validated values
             setSummary({
                 subtotal: calculatedSubtotal,
                 tax: taxAmount,
-                total: calculatedTotal,
+                total: calculatedSubtotal + taxAmount + tipAmount,
             });
             
             // Check for discrepancies between our calculation and API values
-            const apiTotal = parseFloat((response.data.total || 0).toFixed(2));
-            if (Math.abs(calculatedTotal - apiTotal) > 0.01) {
-                // Only show alert if it hasn't been shown yet
+            const apiTotal = parseFloat(response.data.total) || calculatedSubtotal + taxAmount + tipAmount;
+            if (Math.abs((calculatedSubtotal + taxAmount + tipAmount) - apiTotal) > 0.01) {
                 if (!discrepancyAlertShown) {
                     setShowDiscrepancyAlert(true);
-                    setDiscrepancyAlertShown(true); // Mark as shown
+                    setDiscrepancyAlertShown(true);
                 }
             }
             
             setAssignments({});
             setError(null);
-            setRetryAttempts(0); // Reset retry attempts on success
+            setRetryAttempts(0);
             
             // Complete the progress
             setScanProgress(100);
@@ -209,6 +227,10 @@ const BillUploaderMobile = () => {
             setShowErrorUI(true);
             setIsScanning(false);
             setScanProgress(0);
+            
+            // Show more specific error message
+            const errorMessage = error.message || "We couldn't process your bill. Please try again or add items manually.";
+            setError(errorMessage);
         } finally {
             clearInterval(progressInterval);
             setLoading(false);
@@ -237,7 +259,35 @@ const BillUploaderMobile = () => {
         // Reset discrepancy alert
         setShowDiscrepancyAlert(false);
         setDiscrepancyAlertShown(false); // Reset the shown flag when skipping upload
+        setIsManualEntry(true); // Set manual entry flag
         setActiveStep(2);
+    };
+
+    // Handle manual entry mode
+    const handleManualEntry = () => {
+        if (members.length === 0) {
+            setShowMemberAlert(true);
+            return;
+        }
+
+        // Initialize empty bill data
+        setBillData({
+            items: []
+        });
+        // Set API response summary as null since there's no API response
+        setApiResponseSummary(null);
+        // Set summary with initial values
+        setSummary({
+            subtotal: 0,
+            tax: 0,
+            tip: 0,
+            total: 0
+        });
+        // Reset discrepancy alert
+        setShowDiscrepancyAlert(false);
+        setDiscrepancyAlertShown(false);
+        setIsManualEntry(true); // Set manual entry flag
+        setActiveStep(2); // Go to step 2
     };
 
     const handleAddMember = () => {
@@ -1159,6 +1209,18 @@ const BillUploaderMobile = () => {
                                     <div className="file-format">
                                         Supported formats: JPEG, PNG
                                     </div>
+                                    <div className="separator-or">
+                                        <span className="separator-line"></span>
+                                        <span className="separator-text">OR</span>
+                                        <span className="separator-line"></span>
+                                    </div>
+                                    <button 
+                                        onClick={handleManualEntry}
+                                        className="manual-entry-button"
+                                    >
+                                        <span className="manual-icon"></span>
+                                        Enter Bill Manually
+                                    </button>
                                 </>
                             ) : (
                                 <>
@@ -1256,7 +1318,7 @@ const BillUploaderMobile = () => {
             case 2: // Bill Items and Summary
                 return (
                     <div className="mobile-step items-step">
-                        <h2>Review Details</h2>
+                        <h2>{isManualEntry ? "Enter Bill Items" : "Review Details"}</h2>
                         
                         <div className="items-list1 review-items">
                             <div className="review-items-header">
@@ -1400,7 +1462,7 @@ const BillUploaderMobile = () => {
                                 className="next-button" 
                                 disabled={!billData?.items?.length}
                             >
-                                Continue to Assign Items
+                                {isManualEntry ? "Continue to Assign Items" : "Confirm and Continue"}
                             </button>
                         </div>
                     </div>
